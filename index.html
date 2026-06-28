@@ -415,7 +415,7 @@ function renderTaskCard(t){
   <div class="task-card${t.is_hidden?' opacity-50':''}" id="tc-${t.id}"
     draggable="true" data-id="${t.id}"
     onclick="openEditTask('${t.id}')">
-    <span class="drag-handle" onclick="event.stopPropagation()">⠿</span>
+    <span class="drag-handle" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">⠿</span>
     <span class="task-status-dot" style="background:var(--${t.status})"></span>
     <div class="task-body">
       <div class="task-title${t.status==='done'?' done-text':''}">${escHtml(t.title)}</div>
@@ -456,10 +456,16 @@ function switchList(id){state.activeListId=id;state.filter='all';renderApp()}
 function setFilter(f){state.filter=f;renderApp()}
 function toggleHidden(){state.showHidden=!state.showHidden;renderApp()}
 
-// ── DRAG TO REORDER ──────────────────────────────────────────
+// ── DRAG TO REORDER (mouse + touch) ─────────────────────────
 let dragId=null;
+let touchDragEl=null;
+let touchClone=null;
+let touchStartY=0;
+
 function attachDragHandlers(){
+  // Mouse drag (desktop)
   document.querySelectorAll('.task-card').forEach(el=>{
+    el.setAttribute('draggable','true');
     el.addEventListener('dragstart',e=>{
       dragId=el.dataset.id;
       setTimeout(()=>el.classList.add('dragging'),0);
@@ -481,6 +487,53 @@ function attachDragHandlers(){
       el.classList.remove('drag-over');
       if(!dragId||el.dataset.id===dragId) return;
       await reorderTasks(dragId,el.dataset.id);
+    });
+  });
+
+  // Touch drag (mobile) — attach to handles only
+  document.querySelectorAll('.drag-handle').forEach(handle=>{
+    handle.addEventListener('touchstart',e=>{
+      e.stopPropagation();
+      const card=handle.closest('.task-card');
+      if(!card) return;
+      dragId=card.dataset.id;
+      touchDragEl=card;
+      touchStartY=e.touches[0].clientY;
+      // create floating clone
+      const rect=card.getBoundingClientRect();
+      touchClone=card.cloneNode(true);
+      touchClone.style.cssText=`position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:.85;z-index:9999;pointer-events:none;box-shadow:0 8px 24px #0008;border-color:var(--teal);`;
+      document.body.appendChild(touchClone);
+      card.style.opacity='0.3';
+    },{passive:true});
+
+    handle.addEventListener('touchmove',e=>{
+      e.preventDefault();
+      if(!touchClone||!touchDragEl) return;
+      const touch=e.touches[0];
+      const dy=touch.clientY-touchStartY;
+      const rect=touchDragEl.getBoundingClientRect();
+      touchClone.style.top=(rect.top+dy)+'px';
+      // highlight card under finger
+      touchClone.style.pointerEvents='none';
+      const under=document.elementFromPoint(touch.clientX,touch.clientY);
+      const overCard=under?.closest('.task-card');
+      document.querySelectorAll('.task-card').forEach(x=>x.classList.remove('drag-over'));
+      if(overCard&&overCard!==touchDragEl) overCard.classList.add('drag-over');
+    },{passive:false});
+
+    handle.addEventListener('touchend',async e=>{
+      if(!touchClone||!touchDragEl) return;
+      const touch=e.changedTouches[0];
+      touchClone.remove(); touchClone=null;
+      touchDragEl.style.opacity='';
+      document.querySelectorAll('.task-card').forEach(x=>x.classList.remove('drag-over'));
+      const under=document.elementFromPoint(touch.clientX,touch.clientY);
+      const overCard=under?.closest('.task-card');
+      if(overCard&&overCard.dataset.id&&overCard.dataset.id!==dragId){
+        await reorderTasks(dragId,overCard.dataset.id);
+      }
+      touchDragEl=null; dragId=null;
     });
   });
 }
