@@ -458,6 +458,7 @@ function toggleHidden(){state.showHidden=!state.showHidden;renderApp()}
 
 // ── DRAG TO REORDER (mouse + touch) ─────────────────────────
 let dragId=null;
+let dragOverId=null;
 let touchDragEl=null;
 let touchClone=null;
 let touchStartY=0;
@@ -468,25 +469,30 @@ function attachDragHandlers(){
     el.setAttribute('draggable','true');
     el.addEventListener('dragstart',e=>{
       dragId=el.dataset.id;
+      dragOverId=null;
       setTimeout(()=>el.classList.add('dragging'),0);
       e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain', dragId);
     });
-    el.addEventListener('dragend',()=>{
+    el.addEventListener('dragend',async ()=>{
       el.classList.remove('dragging');
       document.querySelectorAll('.task-card').forEach(x=>x.classList.remove('drag-over'));
+      if(dragId && dragOverId && dragId !== dragOverId){
+        await reorderTasks(dragId, dragOverId);
+      }
+      dragId=null; dragOverId=null;
     });
     el.addEventListener('dragover',e=>{
       e.preventDefault();
+      e.dataTransfer.dropEffect='move';
       if(el.dataset.id!==dragId){
         document.querySelectorAll('.task-card').forEach(x=>x.classList.remove('drag-over'));
         el.classList.add('drag-over');
+        dragOverId=el.dataset.id;
       }
     });
-    el.addEventListener('drop',async e=>{
-      e.preventDefault();
+    el.addEventListener('dragleave',e=>{
       el.classList.remove('drag-over');
-      if(!dragId||el.dataset.id===dragId) return;
-      await reorderTasks(dragId,el.dataset.id);
     });
   });
 
@@ -497,12 +503,12 @@ function attachDragHandlers(){
       const card=handle.closest('.task-card');
       if(!card) return;
       dragId=card.dataset.id;
+      dragOverId=null;
       touchDragEl=card;
       touchStartY=e.touches[0].clientY;
-      // create floating clone
       const rect=card.getBoundingClientRect();
       touchClone=card.cloneNode(true);
-      touchClone.style.cssText=`position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:.85;z-index:9999;pointer-events:none;box-shadow:0 8px 24px #0008;border-color:var(--teal);`;
+      touchClone.style.cssText=`position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:.85;z-index:9999;pointer-events:none;box-shadow:0 8px 24px #0008;border-color:var(--teal);border-style:solid;`;
       document.body.appendChild(touchClone);
       card.style.opacity='0.3';
     },{passive:true});
@@ -514,28 +520,25 @@ function attachDragHandlers(){
       const dy=touch.clientY-touchStartY;
       const rect=touchDragEl.getBoundingClientRect();
       touchClone.style.top=(rect.top+dy)+'px';
-      // highlight card under finger
-      touchClone.style.pointerEvents='none';
       const under=document.elementFromPoint(touch.clientX,touch.clientY);
       const overCard=under?.closest('.task-card');
       document.querySelectorAll('.task-card').forEach(x=>x.classList.remove('drag-over'));
-      if(overCard&&overCard!==touchDragEl) overCard.classList.add('drag-over');
+      if(overCard&&overCard!==touchDragEl){
+        overCard.classList.add('drag-over');
+        dragOverId=overCard.dataset.id;
+      }
     },{passive:false});
 
     handle.addEventListener('touchend',async e=>{
       if(!touchDragEl) return;
-      const touch=e.changedTouches[0];
-      // remove clone FIRST so elementFromPoint can find the card beneath
       if(touchClone){ touchClone.remove(); touchClone=null; }
       touchDragEl.style.opacity='';
       document.querySelectorAll('.task-card').forEach(x=>x.classList.remove('drag-over'));
-      // find what card is under the finger
-      const under=document.elementFromPoint(touch.clientX,touch.clientY);
-      const overCard=under?.closest('.task-card');
       const fromId=dragId;
-      touchDragEl=null; dragId=null;
-      if(overCard&&overCard.dataset.id&&overCard.dataset.id!==fromId){
-        await reorderTasks(fromId,overCard.dataset.id);
+      const toId=dragOverId;
+      touchDragEl=null; dragId=null; dragOverId=null;
+      if(fromId && toId && fromId !== toId){
+        await reorderTasks(fromId, toId);
       }
     });
   });
