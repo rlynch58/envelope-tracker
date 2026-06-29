@@ -523,17 +523,20 @@ function attachDragHandlers(){
     },{passive:false});
 
     handle.addEventListener('touchend',async e=>{
-      if(!touchClone||!touchDragEl) return;
+      if(!touchDragEl) return;
       const touch=e.changedTouches[0];
-      touchClone.remove(); touchClone=null;
+      // remove clone FIRST so elementFromPoint can find the card beneath
+      if(touchClone){ touchClone.remove(); touchClone=null; }
       touchDragEl.style.opacity='';
       document.querySelectorAll('.task-card').forEach(x=>x.classList.remove('drag-over'));
+      // find what card is under the finger
       const under=document.elementFromPoint(touch.clientX,touch.clientY);
       const overCard=under?.closest('.task-card');
-      if(overCard&&overCard.dataset.id&&overCard.dataset.id!==dragId){
-        await reorderTasks(dragId,overCard.dataset.id);
-      }
+      const fromId=dragId;
       touchDragEl=null; dragId=null;
+      if(overCard&&overCard.dataset.id&&overCard.dataset.id!==fromId){
+        await reorderTasks(fromId,overCard.dataset.id);
+      }
     });
   });
 }
