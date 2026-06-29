@@ -489,16 +489,19 @@ function startDrag(e){
   document.addEventListener('pointermove', onDragMove);
   document.addEventListener('pointerup', onDragEnd);
   document.addEventListener('pointercancel', onDragEnd);
+  document.addEventListener('touchend', onDragEnd, {passive:true});
 }
 
 function onDragMove(e){
   if(!dragState) return;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const {clone, offsetY} = dragState;
-  clone.style.top = (e.clientY - offsetY) + 'px';
+  clone.style.top = (clientY - offsetY) + 'px';
 
   // find card under pointer (excluding clone)
   clone.style.display = 'none';
-  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const under = document.elementFromPoint(clientX, clientY);
   clone.style.display = '';
   const overCard = under?.closest('.task-card');
   document.querySelectorAll('.task-card').forEach(x=>x.classList.remove('drag-over'));
@@ -515,6 +518,7 @@ async function onDragEnd(e){
   document.removeEventListener('pointermove', onDragMove);
   document.removeEventListener('pointerup', onDragEnd);
   document.removeEventListener('pointercancel', onDragEnd);
+  document.removeEventListener('touchend', onDragEnd);
 
   dragState.clone.remove();
   dragState.card.style.opacity = '';
