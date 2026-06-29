@@ -541,14 +541,16 @@ async function reorderTasks(fromId,toId){
   const reordered=[...listTasks];
   const [moved]=reordered.splice(fromIdx,1);
   reordered.splice(toIdx,0,moved);
-  // update sort_order
+  // update sort_order in state
   const updates=reordered.map((t,i)=>({id:t.id,sort_order:i}));
   updates.forEach(u=>{
     const task=state.tasks.find(t=>t.id===u.id);
     if(task) task.sort_order=u.sort_order;
   });
-  renderApp();
+  // re-render then persist
   await Promise.all(updates.map(u=>sb.from('tasks').update({sort_order:u.sort_order}).eq('id',u.id)));
+  renderApp();
+  showToast('Order saved');
 }
 
 // ── TASK FORM ────────────────────────────────────────────────
