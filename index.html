@@ -425,7 +425,7 @@ function renderTaskCard(t){
         ${due?`<span class="task-due${overdue?' overdue':''}">${due}</span>`:''}
         ${photoCount?`<span class="task-photo-count">📷 ${photoCount}</span>`:''}
         ${t.is_hidden?`<span style="font-size:.7rem;color:var(--muted)">hidden</span>`:''}
-        ${(()=>{const cl=t.checklist||[];if(!cl.length)return '';const done=cl.filter(x=>x.done).length;return `<span style="font-size:.72rem;color:var(--muted)">☑ ${done}/${cl.length}</span>`;})()}
+        ${(()=>{const cl=t.checklist||[];if(!cl.length)return '';const done=cl.filter(x=>(x.status||'todo')==='done'||x.done).length;return `<span style="font-size:.72rem;color:var(--muted)">☑ ${done}/${cl.length}</span>`;})()}
       </div>
     </div>
   </div>`;
@@ -839,28 +839,103 @@ async function boot(){
 }
 
 // ── CHECKLIST ────────────────────────────────────────────────
+const CL_STATUSES=[
+  {key:'todo',label:'To Do',color:'var(--todo)'},
+  {key:'inprogress',label:'In Progress',color:'var(--inprogress)'},
+  {key:'waiting',label:'Waiting',color:'var(--waiting)'},
+  {key:'done',label:'Done',color:'var(--done)'},
+];
+
+function clStatusColor(s){return CL_STATUSES.find(x=>x.key===s)?.color||'var(--todo)';}
+function clStatusLabel(s){return CL_STATUSES.find(x=>x.key===s)?.label||'To Do';}
+function clNextStatus(s){const idx=CL_STATUSES.findIndex(x=>x.key===s);return CL_STATUSES[(idx+1)%CL_STATUSES.length].key;}
+
+let clDragState=null;
+
 function renderChecklistItems(){
   const items=state.editingChecklist||[];
-  $('checklistItems').innerHTML=items.map((item,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-      <input type="checkbox" ${item.done?'checked':''} onchange="toggleCheckItem(${i})"
-        style="width:16px;height:16px;accent-color:var(--teal);flex-shrink:0;cursor:pointer"/>
+  const container=$('checklistItems');
+  container.innerHTML=items.map((item,i)=>{
+    const status=item.status||'todo';
+    const isDone=status==='done';
+    return `
+    <div class="cl-item" data-ci="${i}" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;background:var(--elevated);border:1px solid var(--border);border-radius:8px;padding:8px 10px">
+      <span class="cl-handle" data-ci="${i}" style="color:var(--muted);cursor:grab;font-size:1.1rem;padding:2px 4px;flex-shrink:0;touch-action:none">⠿</span>
+      <button onclick="cycleClStatus(${i})" style="flex-shrink:0;width:10px;height:10px;border-radius:50%;background:${clStatusColor(status)};border:none;cursor:pointer;padding:0"></button>
       <input class="form-input" value="${escHtml(item.text)}" oninput="updateCheckItem(${i},this.value)"
-        style="flex:1;padding:7px 10px;${item.done?'text-decoration:line-through;color:var(--muted)':''}"/>
-      <button onclick="removeCheckItem(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:4px;flex-shrink:0">✕</button>
-    </div>`).join('');
+        style="flex:1;padding:5px 8px;font-size:.85rem;${isDone?'text-decoration:line-through;color:var(--muted)':''}"/>
+      <span style="font-size:.68rem;color:${clStatusColor(status)};font-weight:500;flex-shrink:0;min-width:52px;text-align:right">${clStatusLabel(status)}</span>
+      <button onclick="removeCheckItem(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:2px 4px;flex-shrink:0">✕</button>
+    </div>`;
+  }).join('');
+  attachClDragHandlers();
+}
+
+function attachClDragHandlers(){
+  document.querySelectorAll('.cl-handle').forEach(handle=>{
+    handle.addEventListener('pointerdown',startClDrag);
+  });
+}
+
+function startClDrag(e){
+  e.preventDefault();
+  e.stopPropagation();
+  const row=e.currentTarget.closest('.cl-item');
+  if(!row) return;
+  const idx=parseInt(row.dataset.ci);
+  const rect=row.getBoundingClientRect();
+  const clone=row.cloneNode(true);
+  clone.style.cssText=`position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:.85;z-index:9999;pointer-events:none;box-shadow:0 4px 16px #0008;border:1px solid var(--teal);border-radius:8px;`;
+  document.body.appendChild(clone);
+  row.style.opacity='0.3';
+  clDragState={fromIdx:idx,toIdx:idx,row,clone,offsetY:e.clientY-rect.top};
+  document.addEventListener('pointermove',onClDragMove);
+  document.addEventListener('pointerup',onClDragEnd);
+}
+
+function onClDragMove(e){
+  if(!clDragState) return;
+  const clientY=e.touches?e.touches[0].clientY:e.clientY;
+  const clientX=e.touches?e.touches[0].clientX:e.clientX;
+  clDragState.clone.style.top=(clientY-clDragState.offsetY)+'px';
+  clDragState.clone.style.display='none';
+  const under=document.elementFromPoint(clientX,clientY);
+  clDragState.clone.style.display='';
+  const overRow=under?.closest('.cl-item');
+  document.querySelectorAll('.cl-item').forEach(x=>x.style.borderColor='var(--border)');
+  if(overRow&&overRow!==clDragState.row){
+    overRow.style.borderColor='var(--teal)';
+    clDragState.toIdx=parseInt(overRow.dataset.ci);
+  }
+}
+
+function onClDragEnd(){
+  if(!clDragState) return;
+  document.removeEventListener('pointermove',onClDragMove);
+  document.removeEventListener('pointerup',onClDragEnd);
+  clDragState.clone.remove();
+  clDragState.row.style.opacity='';
+  document.querySelectorAll('.cl-item').forEach(x=>x.style.borderColor='var(--border)');
+  const {fromIdx,toIdx}=clDragState;
+  clDragState=null;
+  if(fromIdx!==toIdx){
+    const items=state.editingChecklist;
+    const [moved]=items.splice(fromIdx,1);
+    items.splice(toIdx,0,moved);
+    renderChecklistItems();
+  }
 }
 
 function addChecklistItem(){
-  state.editingChecklist.push({text:'',done:false});
+  state.editingChecklist.push({text:'',status:'todo'});
   renderChecklistItems();
-  // focus the new input
-  const inputs=$('checklistItems').querySelectorAll('input[type=text], .form-input:not([type=checkbox])');
+  const inputs=$('checklistItems').querySelectorAll('.form-input');
   if(inputs.length) inputs[inputs.length-1].focus();
 }
 
-function toggleCheckItem(i){
-  state.editingChecklist[i].done=!state.editingChecklist[i].done;
+function cycleClStatus(i){
+  const item=state.editingChecklist[i];
+  item.status=clNextStatus(item.status||'todo');
   renderChecklistItems();
 }
 
