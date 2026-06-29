@@ -357,6 +357,7 @@ async function forceRefresh(){
 // ── RENDER ───────────────────────────────────────────────────
 function renderApp(){
   const list=state.lists.find(l=>l.id===state.activeListId);
+  state.tasks.sort((a,b)=>a.sort_order-b.sort_order);
   let tasks=state.tasks.filter(t=>t.list_id===state.activeListId);
   if(!state.showHidden) tasks=tasks.filter(t=>!t.is_hidden);
   if(state.filter!=='all') tasks=tasks.filter(t=>t.status===state.filter);
