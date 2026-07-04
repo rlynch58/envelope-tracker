@@ -7,17 +7,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#00CED1;--surface:#00b5b8;--elevated:#e6fafa;--border:#009ea1;--text:#0d2a2b;--muted:#0d6e70;--teal:#FF6B35;--red:#C0392B;--amber:#8a6d00;--fg:'Space Grotesk',sans-serif;--fb:'Inter',sans-serif;--r:12px;--rs:8px;}
+:root{--bg:#00CED1;--surface:#00b5b8;--elevated:#e6fafa;--border:#009ea1;--text:#0d2a2b;--muted:#0d6e70;--teal:#FF6B35;--red:#C0392B;--amber:#8a6d00;--lime:#A8E63D;--fg:'Space Grotesk',sans-serif;--fb:'Inter',sans-serif;--r:12px;--rs:8px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:100;}
-.brand{font-family:var(--fg);font-size:1.05rem;font-weight:700;letter-spacing:-.03em;color:var(--teal);}
+.brand{font-family:var(--fg);font-size:1.4rem;font-weight:800;letter-spacing:-.03em;color:var(--teal);}
 .brand span{color:var(--text);}
 .tabs{display:flex;gap:3px;background:var(--surface);border-radius:var(--rs);padding:3px;}
 .tab{padding:6px 14px;border:none;border-radius:6px;background:transparent;color:var(--muted);font-family:var(--fb);font-size:.82rem;font-weight:500;cursor:pointer;transition:all .15s;}
 .tab.active{background:var(--elevated);color:var(--text);}
-.btn-icon{width:34px;height:34px;border:1px solid var(--border);border-radius:var(--rs);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.95rem;transition:all .15s;}
-.btn-icon:hover{color:var(--text);border-color:var(--teal);}
+.btn-icon{width:36px;height:36px;border:none;border-radius:var(--rs);background:var(--lime);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .15s;}
+.btn-icon:hover{opacity:.85;}
 .hero{padding:24px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;}
 .week-label{font-size:.7rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
 .week-range{font-family:var(--fg);font-size:1.45rem;font-weight:700;letter-spacing:-.04em;line-height:1;}
@@ -58,9 +58,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .btn-add{display:flex;align-items:center;gap:7px;padding:9px 18px;background:var(--teal);color:#fff;border:none;border-radius:var(--rs);font-family:var(--fg);font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:-.01em;transition:opacity .15s;}
 .txn-section{padding:0 20px 32px;}
 .section-label{font-size:.7rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
-.txn-group{margin-bottom:6px;}
-.txn-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--rs);transition:background .12s;cursor:default;}
-.txn-row:hover{background:var(--surface);}
+.txn-card{background:var(--elevated);border:1px solid var(--border);border-radius:var(--r);padding:4px 16px;}
+.txn-group{margin-bottom:0;}
+.txn-group:not(:last-child){border-bottom:1px solid var(--border);}
+.txn-row{display:flex;align-items:center;gap:12px;padding:13px 0;transition:background .12s;cursor:default;}
+.txn-row:hover{background:rgba(13,42,43,.04);}
 .txn-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .txn-main{flex:1;min-width:0;}
 .txn-vendor{font-size:.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -247,7 +249,7 @@ function renderDashboard(){
   ${!weekExists&&isCur?`<div class="init-banner"><div class="init-banner-text">📅 This week isn't set up yet.</div><button class="btn-amber" onclick="openInitWeek()">Set Up Week</button></div>`:''}
   ${!weekExists&&!isCur?`<div class="init-banner"><div class="init-banner-text">No data for this week.</div></div>`:''}
   <div class="cat-grid" id="catGrid"></div>
-  ${weekExists?`<div class="add-row"><button class="btn-add" onclick="openAddTxn()">+ Log Spending</button></div><div class="txn-section"><div class="section-label">Transactions</div><div id="txnList"></div></div>`:''}`;
+  ${weekExists?`<div class="add-row"><button class="btn-add" onclick="openAddTxn()">+ Log Spending</button></div><div class="txn-section"><div class="section-label">Transactions</div><div class="txn-card"><div id="txnList"></div></div></div>`:''}`;
   if(weekExists){renderCatCards(state.catSpending,pot);renderTxnList(state.transactions,'txnList');}
 }
 function renderCatCards(catSpending,pot){
@@ -357,12 +359,12 @@ function renderHistoryDetail(){
   <div style="padding:20px;max-width:700px;margin:0 auto"><button class="back-btn" onclick="showTab('history')">← All Weeks</button><div class="week-label">Week of</div><div class="week-range" style="font-family:var(--fg);font-size:1.3rem;font-weight:700;letter-spacing:-.04em;margin-bottom:16px">${fmtRange(sd)}</div>
   ${s?`<div style="display:flex;gap:20px;margin-bottom:18px;flex-wrap:wrap"><div class="hstat"><div class="hstat-label">Pot</div><div class="hstat-val neu">${fmt(pot)}</div></div><div class="hstat"><div class="hstat-label">Spent</div><div class="hstat-val neu">${fmt(spent)}</div></div><div class="hstat"><div class="hstat-label">${rem<0?'Over':'Left'}</div><div class="hstat-val ${rem<0?'neg':'pos'}">${fmt(Math.abs(rem))}</div></div>${+s.rollover>0?`<div class="hstat"><div class="hstat-label">Rollover in</div><div class="hstat-val" style="color:var(--amber)">${fmt(+s.rollover)}</div></div>`:''}</div><div class="pot-bar-wrap" style="margin:0 0 20px"><div class="pot-bar-row"><span class="pot-bar-label">$0</span><div class="pot-bar-outer"><div class="pot-bar-pct ${rem<0?'over':''}" style="left:${pot>0?Math.min(Math.max(spent/pot*100,6),98):6}%">${pot>0?(spent/pot*100).toFixed(1):'0.0'}%</div><div class="pot-bar"><div class="pot-bar-fill ${rem<0?'over':''}" style="width:${pot>0?Math.min(spent/pot*100,100):0}%"></div></div></div><span class="pot-bar-label ${rem<0?'neg':'neu'}">${fmt(pot)}</span></div></div>`:''}
   <div class="section-label" style="margin-bottom:10px">By Category</div><div class="cat-grid" id="catGrid" style="padding:0;margin-bottom:24px"></div>
-  <div class="section-label" style="margin-bottom:10px">Transactions</div><div id="hdTxnList"></div></div>`;
+  <div class="section-label" style="margin-bottom:10px">Transactions</div><div class="txn-card"><div id="hdTxnList"></div></div></div>`;
   renderCatCards(state.historyDetailCats,pot);renderTxnList(state.historyDetailTxns,'hdTxnList');
 }
 function renderSettings(){
   const defBudget=state.settings.weekly_budget||'600';
-  $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab" data-v="history" onclick="showTab('history')">History</button></div><button class="btn-icon" onclick="showTab('settings')" style="border-color:var(--teal);color:var(--teal)">⚙</button></nav>
+  $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab" data-v="history" onclick="showTab('history')">History</button></div><button class="btn-icon" onclick="showTab('settings')" style="background:var(--teal);color:#fff">⚙</button></nav>
   <div class="settings-view">
     <div class="settings-section"><div class="settings-title">Default Weekly Budget</div><div class="field"><label>Amount ($)</label><input type="number" id="defBudgetInput" value="${defBudget}" step="1" min="1"></div><button class="btn-primary" onclick="saveDefBudget()">Save Default</button></div>
     <div class="settings-section"><div class="settings-title">Categories</div>${state.categories.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px"><span>${c.icon}</span><span style="flex:1;font-size:.88rem">${c.name}</span><span style="width:14px;height:14px;border-radius:50%;background:${c.color};display:inline-block;flex-shrink:0"></span></div>`).join('')}
