@@ -71,7 +71,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .txn-right{text-align:right;flex-shrink:0;}
 .txn-amount{font-family:var(--fg);font-size:.92rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--red);}
 .txn-date{font-size:.7rem;color:var(--muted);margin-top:1px;}
-.txn-del{opacity:0;width:22px;height:22px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:.8rem;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0;}
+.txn-del{opacity:.55;width:30px;height:30px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0;}
 .txn-row:hover .txn-del{opacity:1;}
 .txn-del:hover{color:var(--red);background:rgba(192,57,43,.12);}
 .split-line{padding:6px 14px 6px 33px;display:flex;align-items:center;gap:8px;}
@@ -122,6 +122,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .autocomplete-item:hover{background:var(--surface);}
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);padding:9px 18px;font-size:.82rem;color:var(--text);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:2000;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.actionable{pointer-events:auto;display:flex;align-items:center;gap:14px;}
+.toast-undo{color:var(--teal);font-weight:700;cursor:pointer;background:none;border:none;font-size:.82rem;padding:0;font-family:var(--fg);}
 .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
 .login-icon{font-size:2.5rem;margin-bottom:14px;}
 .login-title{font-family:var(--fg);font-size:1.5rem;font-weight:700;letter-spacing:-.04em;margin-bottom:6px;}
@@ -194,11 +196,26 @@ let sb,session;
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 const $=id=>document.getElementById(id);
 const fmt=n=>n<0?'-$'+Math.abs(n).toFixed(2):'$'+Number(n).toFixed(2);
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function saturday(d=new Date()){const dt=new Date(d);dt.setHours(0,0,0,0);const dow=dt.getDay();dt.setDate(dt.getDate()-((dow+1)%7));return dt;}
 function dateStr(d){return d.toISOString().slice(0,10);}
 function fmtRange(start){const s=new Date(start+'T00:00:00');const e=new Date(s);e.setDate(e.getDate()+6);const mo=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});return mo(s)+' – '+mo(e);}
 function isCurrentWeek(startDate){return startDate===dateStr(saturday());}
-function showToast(msg,dur=2200){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
+function showToast(msg,undoFn){
+  const t=$('toast');clearTimeout(t._hideTimer);
+  if(typeof undoFn==='function'){
+    t.classList.add('actionable');
+    t.innerHTML='<span></span><button class="toast-undo">Undo</button>';
+    t.querySelector('span').textContent=msg;
+    t.querySelector('.toast-undo').onclick=()=>{undoFn();t.classList.remove('show');};
+    t.classList.add('show');
+    t._hideTimer=setTimeout(()=>{t.classList.remove('show');t.classList.remove('actionable');},5000);
+  }else{
+    t.classList.remove('actionable');
+    t.textContent=msg;t.classList.add('show');
+    t._hideTimer=setTimeout(()=>t.classList.remove('show'),2200);
+  }
+}
 function openOverlay(id){$(id).classList.add('open');}
 function closeOverlay(id){$(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
@@ -261,15 +278,16 @@ function renderCatCards(catSpending,pot){
 }
 function renderTxnList(txns,containerId){
   const el=$(containerId);if(!el)return;
-  if(!txns||txns.length===0){el.innerHTML='<div class="empty-txn">No spending logged yet.</div>';return;}
+  txns=(txns||[]).filter(t=>!pendingTxnGroups.has(t.group_id));
+  if(txns.length===0){el.innerHTML='<div class="empty-txn">No spending logged yet.</div>';return;}
   const groups={};txns.forEach(t=>{if(!groups[t.group_id])groups[t.group_id]=[];groups[t.group_id].push(t);});
   const orderedGroups=Object.values(groups).sort((a,b)=>new Date(b[0].created_at)-new Date(a[0].created_at));
   el.innerHTML=orderedGroups.map(group=>{
     const isSplit=group.length>1;const total=group.reduce((s,t)=>s+(+t.amount),0);const first=group[0];const cat=first.categories;
     const dateLabel=new Date(first.txn_date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    if(!isSplit){return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:${cat?.color||'var(--muted)'}"></div><div class="txn-main"><div class="txn-vendor">${first.vendor||cat?.name||'—'}</div><div class="txn-meta">${cat?.icon||''} ${cat?.name||''}</div></div><div class="txn-right"><div class="txn-amount">-${fmt(+first.amount)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div></div>`;}
+    if(!isSplit){return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:${cat?.color||'var(--muted)'}"></div><div class="txn-main"><div class="txn-vendor">${esc(first.vendor||cat?.name||'—')}</div><div class="txn-meta">${cat?.icon||''} ${esc(cat?.name||'')}</div></div><div class="txn-right"><div class="txn-amount">-${fmt(+first.amount)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div></div>`;}
     const splitLines=group.map(t=>`<div class="split-line"><div class="txn-dot" style="background:${t.categories?.color||'var(--muted)'}"></div><div class="txn-cat-name">${t.categories?.icon||''} ${t.categories?.name||''}</div><div class="txn-amount">-${fmt(+t.amount)}</div></div>`).join('');
-    return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:var(--muted)"></div><div class="txn-main"><div class="txn-vendor">${first.vendor||'Split transaction'}<span class="txn-split-badge">split</span></div>${first.description?`<div class="txn-meta">${first.description}</div>`:''}</div><div class="txn-right"><div class="txn-amount">-${fmt(total)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div>${splitLines}</div>`;
+    return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:var(--muted)"></div><div class="txn-main"><div class="txn-vendor">${esc(first.vendor||'Split transaction')}<span class="txn-split-badge">split</span></div>${first.description?`<div class="txn-meta">${esc(first.description)}</div>`:''}</div><div class="txn-right"><div class="txn-amount">-${fmt(total)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div>${splitLines}</div>`;
   }).join('');
 }
 function prevWeek(){const d=new Date(state.weekStart);d.setDate(d.getDate()-7);state.weekStart=d;render();}
@@ -332,12 +350,36 @@ async function submitTransaction(){
   state.vendorMap[vkey]=rows[0].category_id;
   btn.disabled=false;btn.textContent='Save';closeOverlay('txnOverlay');showToast('Logged ✓');render();
 }
-async function deleteGroup(groupId){
-  const {error}=await sb.from('transactions').delete().eq('group_id',groupId);
-  if(error){showToast('Error deleting');return;}showToast('Removed');render();
+const pendingTxnGroups=new Set();
+let pendingTxnTimer=null;
+function rerenderTxns(){
+  if(state.view==='history-detail') renderTxnList(state.historyDetailTxns,'hdTxnList');
+  else renderTxnList(state.transactions,'txnList');
+}
+function deleteGroup(groupId){
+  pendingTxnGroups.add(groupId);
+  rerenderTxns();
+  clearTimeout(pendingTxnTimer);
+  showToast('Transaction removed',()=>{
+    clearTimeout(pendingTxnTimer);
+    pendingTxnGroups.clear();
+    rerenderTxns();
+  });
+  pendingTxnTimer=setTimeout(commitPendingTxnDeletes,5000);
+}
+async function commitPendingTxnDeletes(){
+  const ids=[...pendingTxnGroups];
+  if(!ids.length) return;
+  const {error}=await sb.from('transactions').delete().in('group_id',ids);
+  pendingTxnGroups.clear();
+  if(error){showToast('Error deleting — restored');rerenderTxns();return;}
+  if(state.view==='history-detail') openHistoryDetail(state.historyDetailWeek);
+  else render();
 }
 let acHideTimer=null;
-function onVendorInput(val){const list=$('acList');if(!val){list.style.display='none';return;}const q=val.toLowerCase();const matches=state.vendorNames.filter(v=>v.startsWith(q)).slice(0,6);if(!matches.length){list.style.display='none';return;}list.innerHTML=matches.map(v=>`<div class="autocomplete-item" onmousedown="selectVendor('${v}')">${v}</div>`).join('');list.style.display='block';}
+let acMatches=[];
+function onVendorInput(val){const list=$('acList');if(!val){list.style.display='none';return;}const q=val.toLowerCase();acMatches=state.vendorNames.filter(v=>v.includes(q)).slice(0,6);if(!acMatches.length){list.style.display='none';return;}list.innerHTML=acMatches.map((v,i)=>`<div class="autocomplete-item" onmousedown="selectVendorIdx(${i})">${esc(v)}</div>`).join('');list.style.display='block';}
+function selectVendorIdx(i){if(acMatches[i]!=null)selectVendor(acMatches[i]);}
 function hideAC(){acHideTimer=setTimeout(()=>{$('acList').style.display='none';},150);}
 function selectVendor(vkey){clearTimeout(acHideTimer);$('txnVendor').value=vkey;$('acList').style.display='none';const catId=state.vendorMap[vkey];if(catId&&splitRows.length===1){splitRows[0].category_id=catId;renderSplitRows();}}
 async function renderHistoryList(){
@@ -369,12 +411,13 @@ function renderSettings(){
     <div class="settings-section"><div class="settings-title">Default Weekly Budget</div><div class="field"><label>Amount ($)</label><input type="number" id="defBudgetInput" value="${defBudget}" step="1" min="1"></div><button class="btn-primary" onclick="saveDefBudget()">Save Default</button></div>
     <div class="settings-section"><div class="settings-title">Categories</div>${state.categories.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px"><span>${c.icon}</span><span style="flex:1;font-size:.88rem">${c.name}</span><span style="width:14px;height:14px;border-radius:50%;background:${c.color};display:inline-block;flex-shrink:0"></span></div>`).join('')}
     <div style="margin-top:14px"><div class="settings-title">Add Category</div><div class="frow"><div class="field"><label>Name</label><input type="text" id="newCatName" placeholder="Entertainment"></div><div class="field" style="flex:0 0 70px"><label>Icon</label><input type="text" id="newCatIcon" placeholder="🎮" maxlength="2"></div><div class="field" style="flex:0 0 60px"><label>Color</label><input type="color" id="newCatColor" value="#A8E63D" style="height:42px;padding:3px"></div></div><button class="btn-primary" onclick="addCategory()">Add</button></div></div>
-    <div class="settings-section"><div class="settings-title">Vendor Memory</div><div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">${state.vendorNames.length} vendor${state.vendorNames.length!==1?'s':''} learned.</div>${state.vendorNames.slice(0,10).map(v=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:.82rem">${v}</span><span style="font-size:.78rem;color:var(--muted)">${state.categories.find(c=>c.id===state.vendorMap[v])?.name||''}</span><button onclick="forgetVendor('${v}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.78rem">forget</button></div>`).join('')}</div>
+    <div class="settings-section"><div class="settings-title">Vendor Memory</div><div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">${state.vendorNames.length} vendor${state.vendorNames.length!==1?'s':''} learned.</div>${state.vendorNames.slice(0,10).map((v,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:.82rem">${esc(v)}</span><span style="font-size:.78rem;color:var(--muted)">${esc(state.categories.find(c=>c.id===state.vendorMap[v])?.name||'')}</span><button onclick="forgetVendorIdx(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.78rem">forget</button></div>`).join('')}</div>
     <div class="settings-section"><div class="settings-title">Account</div><button class="btn-primary" style="background:var(--elevated);color:var(--text);border:1px solid var(--border)" onclick="doSignOut()">Sign Out</button></div>
   </div>`;
 }
 async function saveDefBudget(){const v=$('defBudgetInput').value.trim();if(!v||isNaN(v)){showToast('Enter a valid amount');return;}await sb.from('settings').upsert({key:'weekly_budget',value:v,user_id:session.user.id});state.settings.weekly_budget=v;showToast('Default budget saved ✓');}
 async function addCategory(){const name=$('newCatName').value.trim();const icon=$('newCatIcon').value.trim()||'💰';const color=$('newCatColor').value;if(!name){showToast('Enter a name');return;}const maxSort=Math.max(0,...state.categories.map(c=>c.sort_order));const {error}=await sb.from('categories').insert({name,icon,color,sort_order:maxSort+1,user_id:session.user.id});if(error){showToast('Error: '+error.message);return;}showToast('Category added');await loadMeta();renderSettings();}
+function forgetVendorIdx(i){const v=state.vendorNames[i];if(v!=null)forgetVendor(v);}
 async function forgetVendor(vkey){await sb.from('vendor_category_map').delete().eq('vendor_key',vkey);delete state.vendorMap[vkey];state.vendorNames=state.vendorNames.filter(v=>v!==vkey);showToast('Forgotten');renderSettings();}
 async function doSignOut(){await sb.auth.signOut();session=null;renderLogin();}
 boot();
