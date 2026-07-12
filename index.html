@@ -7,16 +7,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#00CED1;--surface:#00b5b8;--elevated:#e6fafa;--border:#009ea1;--text:#0d2a2b;--muted:#0d6e70;--teal:#FF6B35;--red:#C0392B;--amber:#8a6d00;--lime:#A8E63D;--fg:'Space Grotesk',sans-serif;--fb:'Inter',sans-serif;--r:12px;--rs:8px;}
+:root{--bg:#0F2A2B;--surface:#17393B;--elevated:#1E4345;--border:#2E5A5C;--text:#EAF7F6;--muted:#7FB5B3;--teal:#FF6B35;--teal-text:#FF9A6B;--red:#FF8585;--amber:#E8C25A;--lime:#A8E63D;--action-text:#1A0D06;--fg:'Space Grotesk',sans-serif;--fb:'Inter',sans-serif;--r:12px;--rs:8px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:100;}
 .brand{font-family:var(--fg);font-size:1.4rem;font-weight:800;letter-spacing:-.03em;color:var(--teal);}
 .brand span{color:var(--text);}
+.ver{font-size:.68rem;font-weight:600;color:var(--text);opacity:.6;margin-left:6px;letter-spacing:0;vertical-align:2px;font-family:var(--fb);}
 .tabs{display:flex;gap:3px;background:var(--surface);border-radius:var(--rs);padding:3px;}
 .tab{padding:6px 14px;border:none;border-radius:6px;background:transparent;color:var(--muted);font-family:var(--fb);font-size:.82rem;font-weight:500;cursor:pointer;transition:all .15s;}
 .tab.active{background:var(--elevated);color:var(--text);}
-.btn-icon{width:36px;height:36px;border:none;border-radius:var(--rs);background:var(--lime);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .15s;}
+.btn-icon{width:36px;height:36px;border:none;border-radius:var(--rs);background:var(--lime);color:var(--action-text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .15s;}
 .btn-icon:hover{opacity:.85;}
 .hero{padding:24px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;}
 .week-label{font-size:.7rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
@@ -25,44 +26,44 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .week-nav button{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;font-size:.8rem;transition:all .15s;display:flex;align-items:center;justify-content:center;}
 .week-nav button:hover{color:var(--text);border-color:var(--teal);}
 .week-nav button:disabled{opacity:.3;cursor:default;}
-.now-badge{font-size:.72rem;padding:3px 9px;border-radius:20px;background:var(--teal);color:#fff;font-weight:700;letter-spacing:.05em;}
+.now-badge{font-size:.72rem;padding:3px 9px;border-radius:20px;background:var(--teal);color:var(--action-text);font-weight:700;letter-spacing:.05em;}
 .hero-stats{display:flex;gap:24px;align-items:flex-start;}
 .hstat{text-align:right;}
 .hstat-label{font-size:.68rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
 .hstat-val{font-family:var(--fg);font-size:1.35rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.04em;line-height:1;}
-.pos{color:var(--teal);}.neg{color:var(--red);}.neu{color:var(--text);}
+.pos{color:var(--teal-text);}.neg{color:var(--red);}.neu{color:var(--text);}
 .pot-bar-wrap{margin:0 20px 20px;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;}
 .pot-bar-row{display:flex;align-items:center;gap:14px;}
 .pot-bar-label{font-family:var(--fg);font-size:.72rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap;}
 .pot-bar-label.neg{color:var(--red);}
 .pot-bar-outer{flex:1;position:relative;padding-top:18px;}
-.pot-bar-pct{position:absolute;top:0;font-family:var(--fg);font-size:.85rem;font-weight:800;color:var(--teal);transform:translateX(-50%);white-space:nowrap;transition:left .4s ease;}
+.pot-bar-pct{position:absolute;top:0;font-family:var(--fg);font-size:.85rem;font-weight:800;color:var(--teal-text);transform:translateX(-50%);white-space:nowrap;transition:left .4s ease;}
 .pot-bar-pct.over{color:var(--red);}
-.pot-bar{width:100%;height:4px;background:rgba(13,42,43,.18);border-radius:2px;overflow:hidden;}
+.pot-bar{width:100%;height:4px;background:rgba(234,247,246,.14);border-radius:2px;overflow:hidden;}
 .pot-bar-fill{height:100%;border-radius:2px;background:var(--teal);transition:width .4s ease,background .3s;}
 .pot-bar-fill.over{background:var(--red);}
-.init-banner{margin:0 20px 18px;background:var(--elevated);border:1px solid rgba(138,109,0,.4);border-radius:var(--rs);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.init-banner{margin:0 20px 18px;background:var(--elevated);border:1px solid rgba(232,194,90,.4);border-radius:var(--rs);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .init-banner-text{font-size:.84rem;color:var(--amber);}
-.btn-amber{padding:7px 14px;background:var(--amber);color:#fff;border:none;border-radius:6px;font-family:var(--fg);font-size:.78rem;font-weight:700;cursor:pointer;flex-shrink:0;}
+.btn-amber{padding:7px 14px;background:var(--amber);color:var(--action-text);border:none;border-radius:6px;font-family:var(--fg);font-size:.78rem;font-weight:700;cursor:pointer;flex-shrink:0;}
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:0 20px 20px;}
 .cat-card{background:var(--elevated);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden;}
-.cat-fill{position:absolute;bottom:0;left:0;right:0;opacity:.1;transition:height .5s cubic-bezier(.4,0,.2,1),background .3s;pointer-events:none;}
+.cat-fill{position:absolute;bottom:0;left:0;right:0;opacity:.19;transition:height .5s cubic-bezier(.4,0,.2,1),background .3s;pointer-events:none;}
 .cat-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .cat-icon{font-size:1.1rem;}
 .cat-name{font-family:var(--fg);font-size:.82rem;font-weight:600;letter-spacing:-.01em;color:var(--text);}
 .cat-spent{font-family:var(--fg);font-size:1.2rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.04em;line-height:1;margin-bottom:3px;}
 .cat-pct{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums;}
-.cat-bar{height:3px;background:rgba(13,42,43,.15);border-radius:2px;overflow:hidden;margin-top:10px;}
+.cat-bar{height:3px;background:rgba(234,247,246,.14);border-radius:2px;overflow:hidden;margin-top:10px;}
 .cat-bar-fill{height:100%;border-radius:2px;transition:width .5s cubic-bezier(.4,0,.2,1);}
 .add-row{padding:0 20px 20px;display:flex;justify-content:flex-end;}
-.btn-add{display:flex;align-items:center;gap:7px;padding:9px 18px;background:var(--teal);color:#fff;border:none;border-radius:var(--rs);font-family:var(--fg);font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:-.01em;transition:opacity .15s;}
+.btn-add{display:flex;align-items:center;gap:7px;padding:9px 18px;background:var(--teal);color:var(--action-text);border:none;border-radius:var(--rs);font-family:var(--fg);font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:-.01em;transition:opacity .15s;}
 .txn-section{padding:0 20px 32px;}
 .section-label{font-size:.7rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
 .txn-card{background:var(--elevated);border:1px solid var(--border);border-radius:var(--r);padding:4px 16px;}
 .txn-group{margin-bottom:0;}
 .txn-group:not(:last-child){border-bottom:1px solid var(--border);}
 .txn-row{display:flex;align-items:center;gap:12px;padding:13px 0;transition:background .12s;cursor:default;}
-.txn-row:hover{background:rgba(13,42,43,.04);}
+.txn-row:hover{background:rgba(234,247,246,.04);}
 .txn-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .txn-main{flex:1;min-width:0;}
 .txn-vendor{font-size:.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -73,7 +74,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .txn-date{font-size:.7rem;color:var(--muted);margin-top:1px;}
 .txn-del{opacity:.55;width:30px;height:30px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0;}
 .txn-row:hover .txn-del{opacity:1;}
-.txn-del:hover{color:var(--red);background:rgba(192,57,43,.12);}
+.txn-del:hover{color:var(--red);background:rgba(255,133,133,.16);}
 .split-line{padding:6px 14px 6px 33px;display:flex;align-items:center;gap:8px;}
 .split-line .txn-dot{width:5px;height:5px;opacity:.7;}
 .split-line .txn-cat-name{font-size:.78rem;color:var(--muted);flex:1;}
@@ -103,16 +104,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .field input::placeholder{color:var(--muted);}
 .frow{display:flex;gap:10px;}
 .frow .field{flex:1;}
-.btn-primary{width:100%;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:var(--rs);font-family:var(--fg);font-size:.92rem;font-weight:700;cursor:pointer;letter-spacing:-.01em;margin-top:4px;transition:opacity .15s;}
+.btn-primary{width:100%;padding:12px;background:var(--teal);color:var(--action-text);border:none;border-radius:var(--rs);font-family:var(--fg);font-size:.92rem;font-weight:700;cursor:pointer;letter-spacing:-.01em;margin-top:4px;transition:opacity .15s;}
 .btn-primary:hover{opacity:.9;}
 .btn-primary:disabled{opacity:.5;cursor:default;}
 .rollover-toggle{flex:1;padding:10px 10px;border:1px solid var(--border);border-radius:var(--rs);background:var(--elevated);color:var(--text);font-family:var(--fg);font-size:.84rem;font-weight:700;cursor:pointer;transition:all .15s;}
-.rollover-toggle.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+.rollover-toggle.active{background:var(--teal);color:var(--action-text);border-color:var(--teal);}
 .split-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
 .split-row{display:flex;gap:8px;align-items:flex-end;}
 .split-row .field{flex:1;margin-bottom:0;}
 .split-row .field:last-child{flex:0 0 100px;}
-.split-add{background:none;border:none;color:var(--teal);font-size:.8rem;font-family:var(--fb);cursor:pointer;padding:2px 0;letter-spacing:.02em;}
+.split-add{background:none;border:none;color:var(--teal-text);font-size:.8rem;font-family:var(--fb);cursor:pointer;padding:2px 0;letter-spacing:.02em;}
 .split-remove{width:24px;height:24px;border:1px solid var(--border);border-radius:5px;background:transparent;color:var(--muted);cursor:pointer;font-size:.8rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;align-self:flex-end;margin-bottom:1px;}
 .split-remove:hover{color:var(--red);border-color:var(--red);}
 .split-total-hint{font-size:.74rem;color:var(--muted);margin-bottom:10px;font-variant-numeric:tabular-nums;}
@@ -120,10 +121,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--elevated);border:1px solid var(--teal);border-radius:0 0 var(--rs) var(--rs);z-index:200;max-height:160px;overflow-y:auto;}
 .autocomplete-item{padding:9px 13px;font-size:.88rem;cursor:pointer;transition:background .1s;}
 .autocomplete-item:hover{background:var(--surface);}
-.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);padding:9px 18px;font-size:.82rem;color:var(--text);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:2000;white-space:nowrap;}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:#20494B;border:1px solid var(--teal);box-shadow:0 8px 28px rgba(0,0,0,.45);border-radius:var(--rs);padding:9px 18px;font-size:.82rem;color:var(--text);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:2000;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.actionable{pointer-events:auto;display:flex;align-items:center;gap:14px;}
-.toast-undo{color:var(--teal);font-weight:700;cursor:pointer;background:none;border:none;font-size:.82rem;padding:0;font-family:var(--fg);}
+.toast-undo{color:var(--teal-text);font-weight:700;cursor:pointer;background:none;border:none;font-size:.82rem;padding:0;font-family:var(--fg);}
 .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
 .login-icon{font-size:2.5rem;margin-bottom:14px;}
 .login-title{font-family:var(--fg);font-size:1.5rem;font-weight:700;letter-spacing:-.04em;margin-bottom:6px;}
@@ -138,17 +139,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 (function(){
   const c=document.createElement('canvas');c.width=180;c.height=180;
   const x=c.getContext('2d');
-  x.fillStyle='#00CED1';x.fillRect(0,0,180,180);
-  x.fillStyle='#0d2a2b';
+  x.fillStyle='#0F2A2B';x.fillRect(0,0,180,180);
+  x.fillStyle='#EAF7F6';
   x.beginPath();x.roundRect(20,45,140,100,8);x.fill();
-  x.fillStyle='#00b5b8';
+  x.fillStyle='#00CED1';
   x.beginPath();x.moveTo(20,45);x.lineTo(90,100);x.lineTo(160,45);x.closePath();x.fill();
-  x.strokeStyle='#00b5b8';x.lineWidth=2;
+  x.strokeStyle='#00CED1';x.lineWidth=2;
   x.beginPath();x.moveTo(20,145);x.lineTo(65,100);x.stroke();
   x.beginPath();x.moveTo(160,145);x.lineTo(115,100);x.stroke();
   x.fillStyle='#FF6B35';
   x.beginPath();x.arc(130,130,32,0,Math.PI*2);x.fill();
-  x.fillStyle='#0d2a2b';
+  x.fillStyle='#1A0D06';
   x.font='bold 36px Arial';x.textAlign='center';x.textBaseline='middle';
   x.fillText('$',130,132);
   const link=document.createElement('link');
@@ -193,6 +194,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js"></script>
 <script>
 let sb,session;
+const APP_VERSION = '1.1';
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 const $=id=>document.getElementById(id);
 const fmt=n=>n<0?'-$'+Math.abs(n).toFixed(2):'$'+Number(n).toFixed(2);
@@ -207,7 +209,7 @@ function showToast(msg,undoFn){
     t.classList.add('actionable');
     t.innerHTML='<span></span><button class="toast-undo">Undo</button>';
     t.querySelector('span').textContent=msg;
-    t.querySelector('.toast-undo').onclick=()=>{undoFn();t.classList.remove('show');};
+    t.querySelector('.toast-undo').onclick=()=>{undoFn();t.classList.remove('show');t.classList.remove('actionable');};
     t.classList.add('show');
     t._hideTimer=setTimeout(()=>{t.classList.remove('show');t.classList.remove('actionable');},5000);
   }else{
@@ -260,7 +262,7 @@ function renderDashboard(){
   const wStr=dateStr(state.weekStart);const isCur=isCurrentWeek(wStr);const s=state.summary;
   const pot=s?+s.total_pot:0;const spent=s?+s.total_spent:0;const rem=s?+s.remaining:0;
   const pct=pot>0?Math.min(spent/pot*100,100):0;const isOver=rem<0;const weekExists=!!state.currentWeek;
-  $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span></div><div class="tabs"><button class="tab active" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab" data-v="history" onclick="showTab('history')">History</button></div><div style="display:flex;gap:6px"><button class="btn-icon" onclick="forceRefresh()">↻</button><button class="btn-icon" onclick="showTab('settings')">⚙</button></div></nav>
+  $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span><span class="ver">v${APP_VERSION}</span></div><div class="tabs"><button class="tab active" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab" data-v="history" onclick="showTab('history')">History</button></div><div style="display:flex;gap:6px"><button class="btn-icon" onclick="forceRefresh()">↻</button><button class="btn-icon" onclick="showTab('settings')">⚙</button></div></nav>
   <div class="hero"><div class="hero-left"><div class="week-label">Week of</div><div class="week-range">${fmtRange(wStr)}</div><div class="week-nav"><button onclick="prevWeek()">←</button>${isCur?'<span class="now-badge">NOW</span>':''}<button onclick="nextWeek()" ${isCur?'disabled':''}>→</button></div></div>${weekExists?`<div class="hero-stats"><div class="hstat"><div class="hstat-label">Spent</div><div class="hstat-val neu">${fmt(spent)}</div></div><div class="hstat"><div class="hstat-label">Left</div><div class="hstat-val ${isOver?'neg':'pos'}">${fmt(rem)}</div></div></div>`:''}</div>
   ${weekExists?`<div class="pot-bar-wrap"><div class="pot-bar-row"><span class="pot-bar-label">$0</span><div class="pot-bar-outer"><div class="pot-bar-pct ${isOver?'over':''}" style="left:${Math.min(Math.max(pct,6),98)}%">${pct.toFixed(1)}%</div><div class="pot-bar"><div class="pot-bar-fill ${isOver?'over':''}" style="width:${pct}%"></div></div></div><span class="pot-bar-label ${isOver?'neg':'neu'}">${fmt(pot)}${s&&+s.rollover>0?'*':''}</span></div>${s&&+s.rollover>0?`<div style="font-size:.74rem;color:var(--amber);margin-top:10px;">* includes ${fmt(+s.rollover)} rollover from last week</div>`:''}</div>`:'' }
   ${!weekExists&&isCur?`<div class="init-banner"><div class="init-banner-text">📅 This week isn't set up yet.</div><button class="btn-amber" onclick="openInitWeek()">Set Up Week</button></div>`:''}
@@ -327,7 +329,8 @@ function openAddTxn(){
   if(!state.currentWeek)return;
   $('txnVendor').value='';$('txnDesc').value='';$('txnDate').value=new Date().toISOString().slice(0,10);
   splitRows=[{category_id:state.categories[0]?.id||'',amount:''}];renderSplitRows();updateSplitHint();
-  openOverlay('txnOverlay');setTimeout(()=>$('txnVendor').focus(),120);
+  openOverlay('txnOverlay');
+  if(matchMedia('(hover:hover)').matches) setTimeout(()=>$('txnVendor').focus(),120);
 }
 function renderSplitRows(){
   $('splitRows').innerHTML=splitRows.map((r,i)=>`<div class="split-row"><div class="field"><label>Category</label><select onchange="splitRows[${i}].category_id=this.value">${state.categories.map(c=>`<option value="${c.id}" ${c.id===r.category_id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select></div><div class="field"><label>Amount ($)</label><input type="number" value="${r.amount}" placeholder="0.00" step="0.01" min="0.01" oninput="splitRows[${i}].amount=this.value;updateSplitHint()"></div>${splitRows.length>1?`<button class="split-remove" onclick="removeSplitRow(${i})">✕</button>`:''}</div>`).join('');
@@ -383,10 +386,10 @@ function selectVendorIdx(i){if(acMatches[i]!=null)selectVendor(acMatches[i]);}
 function hideAC(){acHideTimer=setTimeout(()=>{$('acList').style.display='none';},150);}
 function selectVendor(vkey){clearTimeout(acHideTimer);$('txnVendor').value=vkey;$('acList').style.display='none';const catId=state.vendorMap[vkey];if(catId&&splitRows.length===1){splitRows[0].category_id=catId;renderSplitRows();}}
 async function renderHistoryList(){
-  $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab active" data-v="history" onclick="showTab('history')">History</button></div><div style="display:flex;gap:6px"><button class="btn-icon" onclick="forceRefresh()">↻</button><button class="btn-icon" onclick="showTab('settings')">⚙</button></div></nav><div class="history-view"><div class="section-label" style="margin-bottom:14px">All Weeks</div><div id="hwList"><div style="color:var(--muted);font-size:.84rem">Loading…</div></div></div>`;
+  $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span><span class="ver">v${APP_VERSION}</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab active" data-v="history" onclick="showTab('history')">History</button></div><div style="display:flex;gap:6px"><button class="btn-icon" onclick="forceRefresh()">↻</button><button class="btn-icon" onclick="showTab('settings')">⚙</button></div></nav><div class="history-view"><div class="section-label" style="margin-bottom:14px">All Weeks</div><div id="hwList"><div style="color:var(--muted);font-size:.84rem">Loading…</div></div></div>`;
   const {data:sums}=await sb.from('week_summary').select('*').order('start_date',{ascending:false});
   const list=$('hwList');if(!sums||!sums.length){list.innerHTML='<div style="color:var(--muted);font-size:.84rem">No weeks yet.</div>';return;}
-  list.innerHTML=sums.map(s=>{const rem=+s.remaining;return `<div class="hw-card" onclick="openHistoryDetail('${s.start_date}')"><div><div class="hw-range">${fmtRange(s.start_date)}${isCurrentWeek(s.start_date)?' <span style="color:var(--teal);font-size:.72rem">NOW</span>':''}</div><div class="hw-sub">${fmt(+s.total_spent)} spent of ${fmt(+s.total_pot)}</div></div><div><div class="hw-stat-val ${rem<0?'neg':'pos'}">${fmt(rem)}</div><div class="hw-stat-sub">${rem<0?'over':'left'}</div></div></div>`;}).join('');
+  list.innerHTML=sums.map(s=>{const rem=+s.remaining;return `<div class="hw-card" onclick="openHistoryDetail('${s.start_date}')"><div><div class="hw-range">${fmtRange(s.start_date)}${isCurrentWeek(s.start_date)?' <span style="color:var(--teal-text);font-size:.72rem">NOW</span>':''}</div><div class="hw-sub">${fmt(+s.total_spent)} spent of ${fmt(+s.total_pot)}</div></div><div><div class="hw-stat-val ${rem<0?'neg':'pos'}">${fmt(rem)}</div><div class="hw-stat-sub">${rem<0?'over':'left'}</div></div></div>`;}).join('');
 }
 async function openHistoryDetail(startDate){
   state.view='history-detail';state.historyDetailWeek=startDate;
@@ -397,7 +400,7 @@ async function openHistoryDetail(startDate){
 function renderHistoryDetail(){
   const sd=state.historyDetailWeek;const s=state.historyDetailSummary;
   const pot=s?+s.total_pot:0;const spent=s?+s.total_spent:0;const rem=s?+s.remaining:0;
-  $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab active" data-v="history" onclick="showTab('history')">History</button></div><div style="display:flex;gap:6px"><button class="btn-icon" onclick="forceRefresh()">↻</button><button class="btn-icon" onclick="showTab('settings')">⚙</button></div></nav>
+  $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span><span class="ver">v${APP_VERSION}</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab active" data-v="history" onclick="showTab('history')">History</button></div><div style="display:flex;gap:6px"><button class="btn-icon" onclick="forceRefresh()">↻</button><button class="btn-icon" onclick="showTab('settings')">⚙</button></div></nav>
   <div style="padding:20px;max-width:700px;margin:0 auto"><button class="back-btn" onclick="showTab('history')">← All Weeks</button><div class="week-label">Week of</div><div class="week-range" style="font-family:var(--fg);font-size:1.3rem;font-weight:700;letter-spacing:-.04em;margin-bottom:16px">${fmtRange(sd)}</div>
   ${s?`<div style="display:flex;gap:20px;margin-bottom:18px;flex-wrap:wrap"><div class="hstat"><div class="hstat-label">Pot</div><div class="hstat-val neu">${fmt(pot)}</div></div><div class="hstat"><div class="hstat-label">Spent</div><div class="hstat-val neu">${fmt(spent)}</div></div><div class="hstat"><div class="hstat-label">${rem<0?'Over':'Left'}</div><div class="hstat-val ${rem<0?'neg':'pos'}">${fmt(Math.abs(rem))}</div></div>${+s.rollover>0?`<div class="hstat"><div class="hstat-label">Rollover in</div><div class="hstat-val" style="color:var(--amber)">${fmt(+s.rollover)}</div></div>`:''}</div><div class="pot-bar-wrap" style="margin:0 0 20px"><div class="pot-bar-row"><span class="pot-bar-label">$0</span><div class="pot-bar-outer"><div class="pot-bar-pct ${rem<0?'over':''}" style="left:${pot>0?Math.min(Math.max(spent/pot*100,6),98):6}%">${pot>0?(spent/pot*100).toFixed(1):'0.0'}%</div><div class="pot-bar"><div class="pot-bar-fill ${rem<0?'over':''}" style="width:${pot>0?Math.min(spent/pot*100,100):0}%"></div></div></div><span class="pot-bar-label ${rem<0?'neg':'neu'}">${fmt(pot)}</span></div></div>`:''}
   <div class="section-label" style="margin-bottom:10px">By Category</div><div class="cat-grid" id="catGrid" style="padding:0;margin-bottom:24px"></div>
@@ -406,7 +409,7 @@ function renderHistoryDetail(){
 }
 function renderSettings(){
   const defBudget=state.settings.weekly_budget||'600';
-  $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab" data-v="history" onclick="showTab('history')">History</button></div><button class="btn-icon" onclick="showTab('settings')" style="background:var(--teal);color:#fff">⚙</button></nav>
+  $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span><span class="ver">v${APP_VERSION}</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab" data-v="history" onclick="showTab('history')">History</button></div><button class="btn-icon" onclick="showTab('settings')" style="background:var(--teal);color:var(--action-text)">⚙</button></nav>
   <div class="settings-view">
     <div class="settings-section"><div class="settings-title">Default Weekly Budget</div><div class="field"><label>Amount ($)</label><input type="number" id="defBudgetInput" value="${defBudget}" step="1" min="1"></div><button class="btn-primary" onclick="saveDefBudget()">Save Default</button></div>
     <div class="settings-section"><div class="settings-title">Categories</div>${state.categories.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px"><span>${c.icon}</span><span style="flex:1;font-size:.88rem">${c.name}</span><span style="width:14px;height:14px;border-radius:50%;background:${c.color};display:inline-block;flex-shrink:0"></span></div>`).join('')}
