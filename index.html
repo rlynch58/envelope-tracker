@@ -73,6 +73,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .txn-amount{font-family:var(--fg);font-size:.92rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--red);}
 .txn-date{font-size:.7rem;color:var(--muted);margin-top:1px;}
 .txn-del{opacity:.55;width:30px;height:30px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0;}
+.txn-edit{opacity:.85;font-size:.74rem;color:var(--teal-text);font-weight:700;background:none;border:none;cursor:pointer;padding:2px 8px;flex-shrink:0;font-family:var(--fb);}
+.txn-edit:hover{opacity:1;text-decoration:underline;}
 .txn-row:hover .txn-del{opacity:1;}
 .txn-del:hover{color:var(--red);background:rgba(255,133,133,.16);}
 .split-line{padding:6px 14px 6px 33px;display:flex;align-items:center;gap:8px;}
@@ -167,7 +169,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <div class="toast" id="toast"></div>
 <div class="overlay" id="txnOverlay">
   <div class="modal">
-    <div class="modal-title"><span>Log Spending</span><button class="modal-close" onclick="closeOverlay('txnOverlay')">✕</button></div>
+    <div class="modal-title"><span id="txnModalTitle">Log Spending</span><button class="modal-close" onclick="closeOverlay('txnOverlay')">✕</button></div>
     <div class="field"><label>Vendor / Retailer</label><div class="vendor-wrap"><input type="text" id="txnVendor" placeholder="e.g. HEB, Whataburger" autocomplete="off" oninput="onVendorInput(this.value)" onblur="hideAC()"><div class="autocomplete-list" id="acList" style="display:none"></div></div></div>
     <div class="field"><label>Description (optional)</label><input type="text" id="txnDesc" placeholder="e.g. weekly groceries"></div>
     <div class="field"><label>Date</label><input type="date" id="txnDate"></div>
@@ -194,7 +196,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js"></script>
 <script>
 let sb,session;
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 const $=id=>document.getElementById(id);
 const fmt=n=>n<0?'-$'+Math.abs(n).toFixed(2):'$'+Number(n).toFixed(2);
@@ -257,7 +259,16 @@ async function doLogin(){
   if(error){$('loginErr').textContent=error.message;return;}session=data.session;await loadMeta();render();
 }
 function showTab(v){state.view=v;document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.v===v));render();}
-async function render(){await loadWeekData(dateStr(state.weekStart));if(state.view==='dashboard')renderDashboard();else if(state.view==='history')renderHistoryList();else if(state.view==='history-detail')renderHistoryDetail();else if(state.view==='settings')renderSettings();}
+async function render(){
+  await loadWeekData(dateStr(state.weekStart));
+  if(state.view==='dashboard'){
+    if(!state.currentWeek&&isCurrentWeek(dateStr(state.weekStart))) await computePendingRollover();
+    renderDashboard();
+  }
+  else if(state.view==='history')renderHistoryList();
+  else if(state.view==='history-detail')renderHistoryDetail();
+  else if(state.view==='settings')renderSettings();
+}
 function renderDashboard(){
   const wStr=dateStr(state.weekStart);const isCur=isCurrentWeek(wStr);const s=state.summary;
   const pot=s?+s.total_pot:0;const spent=s?+s.total_spent:0;const rem=s?+s.remaining:0;
@@ -265,7 +276,7 @@ function renderDashboard(){
   $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span><span class="ver">v${APP_VERSION}</span></div><div class="tabs"><button class="tab active" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab" data-v="history" onclick="showTab('history')">History</button></div><div style="display:flex;gap:6px"><button class="btn-icon" onclick="forceRefresh()">↻</button><button class="btn-icon" onclick="showTab('settings')">⚙</button></div></nav>
   <div class="hero"><div class="hero-left"><div class="week-label">Week of</div><div class="week-range">${fmtRange(wStr)}</div><div class="week-nav"><button onclick="prevWeek()">←</button>${isCur?'<span class="now-badge">NOW</span>':''}<button onclick="nextWeek()" ${isCur?'disabled':''}>→</button></div></div>${weekExists?`<div class="hero-stats"><div class="hstat"><div class="hstat-label">Spent</div><div class="hstat-val neu">${fmt(spent)}</div></div><div class="hstat"><div class="hstat-label">Left</div><div class="hstat-val ${isOver?'neg':'pos'}">${fmt(rem)}</div></div></div>`:''}</div>
   ${weekExists?`<div class="pot-bar-wrap"><div class="pot-bar-row"><span class="pot-bar-label">$0</span><div class="pot-bar-outer"><div class="pot-bar-pct ${isOver?'over':''}" style="left:${Math.min(Math.max(pct,6),98)}%">${pct.toFixed(1)}%</div><div class="pot-bar"><div class="pot-bar-fill ${isOver?'over':''}" style="width:${pct}%"></div></div></div><span class="pot-bar-label ${isOver?'neg':'neu'}">${fmt(pot)}${s&&+s.rollover>0?'*':''}</span></div>${s&&+s.rollover>0?`<div style="font-size:.74rem;color:var(--amber);margin-top:10px;">* includes ${fmt(+s.rollover)} rollover from last week</div>`:''}</div>`:'' }
-  ${!weekExists&&isCur?`<div class="init-banner"><div class="init-banner-text">📅 This week isn't set up yet.</div><button class="btn-amber" onclick="openInitWeek()">Set Up Week</button></div>`:''}
+  ${!weekExists&&isCur?`<div class="init-banner"><div><div class="init-banner-text">📅 Set up Week of ${fmtRange(wStr)}</div><div style="font-size:.78rem;color:var(--muted);margin-top:3px;">${fmt(parseFloat(state.settings.weekly_budget)||600)} budget${pendingRollover>0?` · +${fmt(pendingRollover)} rollover from last week`:''}</div></div><div style="display:flex;gap:12px;align-items:center;flex-shrink:0;"><button class="btn-amber" onclick="oneTapStartWeek()">Start Week</button><span style="font-size:.78rem;color:var(--muted);text-decoration:underline;cursor:pointer;white-space:nowrap;" onclick="openInitWeek()">Customize</span></div></div>`:''}
   ${!weekExists&&!isCur?`<div class="init-banner"><div class="init-banner-text">No data for this week.</div></div>`:''}
   <div class="cat-grid" id="catGrid"></div>
   ${weekExists?`<div class="add-row"><button class="btn-add" onclick="openAddTxn()">+ Log Spending</button></div><div class="txn-section"><div class="section-label">Transactions</div><div class="txn-card"><div id="txnList"></div></div></div>`:''}`;
@@ -287,23 +298,33 @@ function renderTxnList(txns,containerId){
   el.innerHTML=orderedGroups.map(group=>{
     const isSplit=group.length>1;const total=group.reduce((s,t)=>s+(+t.amount),0);const first=group[0];const cat=first.categories;
     const dateLabel=new Date(first.txn_date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    if(!isSplit){return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:${cat?.color||'var(--muted)'}"></div><div class="txn-main"><div class="txn-vendor">${esc(first.vendor||cat?.name||'—')}</div><div class="txn-meta">${cat?.icon||''} ${esc(cat?.name||'')}</div></div><div class="txn-right"><div class="txn-amount">-${fmt(+first.amount)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div></div>`;}
+    if(!isSplit){return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:${cat?.color||'var(--muted)'}"></div><div class="txn-main"><div class="txn-vendor">${esc(first.vendor||cat?.name||'—')}</div><div class="txn-meta">${cat?.icon||''} ${esc(cat?.name||'')}</div></div><div class="txn-right"><div class="txn-amount">-${fmt(+first.amount)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-edit" onclick="openEditTxn('${first.group_id}')">Edit</button><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div></div>`;}
     const splitLines=group.map(t=>`<div class="split-line"><div class="txn-dot" style="background:${t.categories?.color||'var(--muted)'}"></div><div class="txn-cat-name">${t.categories?.icon||''} ${t.categories?.name||''}</div><div class="txn-amount">-${fmt(+t.amount)}</div></div>`).join('');
-    return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:var(--muted)"></div><div class="txn-main"><div class="txn-vendor">${esc(first.vendor||'Split transaction')}<span class="txn-split-badge">split</span></div>${first.description?`<div class="txn-meta">${esc(first.description)}</div>`:''}</div><div class="txn-right"><div class="txn-amount">-${fmt(total)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div>${splitLines}</div>`;
+    return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:var(--muted)"></div><div class="txn-main"><div class="txn-vendor">${esc(first.vendor||'Split transaction')}<span class="txn-split-badge">split</span></div>${first.description?`<div class="txn-meta">${esc(first.description)}</div>`:''}</div><div class="txn-right"><div class="txn-amount">-${fmt(total)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-edit" onclick="openEditTxn('${first.group_id}')">Edit</button><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div>${splitLines}</div>`;
   }).join('');
 }
 function prevWeek(){const d=new Date(state.weekStart);d.setDate(d.getDate()-7);state.weekStart=d;render();}
 function nextWeek(){const today=saturday();const d=new Date(state.weekStart);d.setDate(d.getDate()+7);if(d>today)return;state.weekStart=d;render();}
 let pendingRollover=0,applyRollover=true;
-async function openInitWeek(){
-  const wStr=dateStr(state.weekStart);$('initTitle').textContent='Set Up '+fmtRange(wStr);
-  $('initBudget').value=state.settings.weekly_budget||'600';
+async function computePendingRollover(){
   const prevSat=new Date(state.weekStart);prevSat.setDate(prevSat.getDate()-7);
   const {data:prevSum}=await sb.from('week_summary').select('*').eq('start_date',dateStr(prevSat)).single();
   pendingRollover=(prevSum&&+prevSum.remaining>0)?+prevSum.remaining:0;
   applyRollover=true;
+}
+async function openInitWeek(){
+  const wStr=dateStr(state.weekStart);$('initTitle').textContent='Set Up '+fmtRange(wStr);
+  $('initBudget').value=state.settings.weekly_budget||'600';
+  await computePendingRollover();
   renderRolloverBlock();
   openOverlay('initOverlay');
+}
+async function oneTapStartWeek(){
+  const budget=parseFloat(state.settings.weekly_budget)||600;
+  const applyRo=pendingRollover>0;
+  const {error}=await sb.rpc('initialize_week',{p_start_date:dateStr(state.weekStart),p_base_budget:budget,p_apply_rollover:applyRo});
+  if(error){showToast('Error: '+error.message);return;}
+  showToast('Week ready 🎉');await loadMeta();render();
 }
 function renderRolloverBlock(){
   const block=$('initRolloverBlock');
@@ -325,12 +346,27 @@ async function submitInitWeek(){
   closeOverlay('initOverlay');showToast('Week ready 🎉');await loadMeta();render();
 }
 let splitRows=[];
+let editingGroupId=null,editingWeekId=null;
 function openAddTxn(){
   if(!state.currentWeek)return;
+  editingGroupId=null;editingWeekId=null;$('txnModalTitle').textContent='Log Spending';
   $('txnVendor').value='';$('txnDesc').value='';$('txnDate').value=new Date().toISOString().slice(0,10);
   splitRows=[{category_id:state.categories[0]?.id||'',amount:''}];renderSplitRows();updateSplitHint();
   openOverlay('txnOverlay');
   if(matchMedia('(hover:hover)').matches) setTimeout(()=>$('txnVendor').focus(),120);
+}
+function openEditTxn(groupId){
+  const list=state.view==='history-detail'?state.historyDetailTxns:state.transactions;
+  const rows=list.filter(t=>t.group_id===groupId);
+  if(!rows.length)return;
+  editingGroupId=groupId;editingWeekId=rows[0].week_id;
+  $('txnModalTitle').textContent='Edit Transaction';
+  $('txnVendor').value=rows[0].vendor||'';
+  $('txnDesc').value=rows[0].description||'';
+  $('txnDate').value=rows[0].txn_date;
+  splitRows=rows.map(r=>({category_id:r.category_id,amount:String(r.amount)}));
+  renderSplitRows();updateSplitHint();
+  openOverlay('txnOverlay');
 }
 function renderSplitRows(){
   $('splitRows').innerHTML=splitRows.map((r,i)=>`<div class="split-row"><div class="field"><label>Category</label><select onchange="splitRows[${i}].category_id=this.value">${state.categories.map(c=>`<option value="${c.id}" ${c.id===r.category_id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select></div><div class="field"><label>Amount ($)</label><input type="number" value="${r.amount}" placeholder="0.00" step="0.01" min="0.01" oninput="splitRows[${i}].amount=this.value;updateSplitHint()"></div>${splitRows.length>1?`<button class="split-remove" onclick="removeSplitRow(${i})">✕</button>`:''}</div>`).join('');
@@ -343,11 +379,26 @@ async function submitTransaction(){
   const rows=splitRows.map(r=>({category_id:r.category_id,amount:parseFloat(r.amount)||0})).filter(r=>r.amount>0);
   if(!rows.length){showToast('Enter an amount');return;}if(!vendor){showToast('Enter a vendor');return;}
   const btn=$('txnSubmitBtn');btn.disabled=true;btn.textContent='Saving…';
+  const vkey=vendor.toLowerCase().trim();
+  if(editingGroupId){
+    const groupId=editingGroupId,weekId=editingWeekId;
+    const {error:delErr}=await sb.from('transactions').delete().eq('group_id',groupId);
+    if(delErr){showToast('Error: '+delErr.message);btn.disabled=false;btn.textContent='Save';return;}
+    const inserts=rows.map(r=>({week_id:weekId,category_id:r.category_id,group_id:groupId,vendor:vendor||null,description:desc||null,amount:r.amount,txn_date:date,user_id:session.user.id}));
+    const {error}=await sb.from('transactions').insert(inserts);
+    if(error){showToast('Error: '+error.message);btn.disabled=false;btn.textContent='Save';return;}
+    await sb.from('vendor_category_map').upsert({vendor_key:vkey,category_id:rows[0].category_id,user_id:session.user.id,updated_at:new Date().toISOString()});
+    if(!state.vendorMap[vkey]){state.vendorNames.push(vkey);state.vendorNames.sort();}
+    state.vendorMap[vkey]=rows[0].category_id;
+    editingGroupId=null;editingWeekId=null;
+    btn.disabled=false;btn.textContent='Save';closeOverlay('txnOverlay');showToast('Updated ✓');
+    if(state.view==='history-detail')openHistoryDetail(state.historyDetailWeek);else render();
+    return;
+  }
   const groupId=crypto.randomUUID();
   const inserts=rows.map(r=>({week_id:state.currentWeek.id,category_id:r.category_id,group_id:groupId,vendor:vendor||null,description:desc||null,amount:r.amount,txn_date:date,user_id:session.user.id}));
   const {error}=await sb.from('transactions').insert(inserts);
   if(error){showToast('Error: '+error.message);btn.disabled=false;btn.textContent='Save';return;}
-  const vkey=vendor.toLowerCase().trim();
   await sb.from('vendor_category_map').upsert({vendor_key:vkey,category_id:rows[0].category_id,user_id:session.user.id,updated_at:new Date().toISOString()});
   if(!state.vendorMap[vkey]){state.vendorNames.push(vkey);state.vendorNames.sort();}
   state.vendorMap[vkey]=rows[0].category_id;
