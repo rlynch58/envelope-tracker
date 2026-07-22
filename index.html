@@ -51,7 +51,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .init-banner-text{font-size:.84rem;color:var(--amber);}
 .btn-amber{padding:7px 14px;background:var(--amber);color:var(--action-text);border:none;border-radius:6px;font-family:var(--fg);font-size:.78rem;font-weight:700;cursor:pointer;flex-shrink:0;}
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:0 20px 20px;}
-.cat-card{background:var(--elevated);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden;}
+.cat-card{background:var(--elevated);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.cat-card.active{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal);}
 .cat-fill{position:absolute;bottom:0;left:0;right:0;opacity:.19;transition:height .5s cubic-bezier(.4,0,.2,1),background .3s;pointer-events:none;}
 .cat-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .cat-icon{font-size:1.1rem;}
@@ -209,9 +210,11 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 let sb,session;
 const APP_VERSION = '1.3';
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
+let catFilter=null;
 const $=id=>document.getElementById(id);
 const fmt=n=>n<0?'-$'+Math.abs(n).toFixed(2):'$'+Number(n).toFixed(2);
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const toInitCap=s=>(s||'').replace(/['’‘ʼ＇]/g,'').toLowerCase().replace(/(^|[^a-z0-9])([a-z])/g,(_,p1,p2)=>p1+p2.toUpperCase());
 function saturday(d=new Date()){const dt=new Date(d);dt.setHours(0,0,0,0);const dow=dt.getDay();dt.setDate(dt.getDate()-((dow+1)%7));return dt;}
 function dateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function fmtRange(start){const s=new Date(start+'T00:00:00');const e=new Date(s);e.setDate(e.getDate()+6);const mo=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});return mo(s)+' – '+mo(e);}
@@ -278,7 +281,7 @@ async function doLogin(){
   const {data,error}=await sb.auth.signInWithPassword({email,password:pw});
   if(error){$('loginErr').textContent=error.message;return;}session=data.session;await loadMeta();render();
 }
-function showTab(v){state.view=v;document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.v===v));render();}
+function showTab(v){state.view=v;catFilter=null;document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.v===v));render();}
 async function render(){
   await loadWeekData(dateStr(state.weekStart));
   if(state.view==='dashboard'){
@@ -307,12 +310,21 @@ function renderCatCards(catSpending,pot){
   const spendMap={};catSpending.forEach(c=>{spendMap[c.category_id]=c;});
   const rows=state.categories.map(c=>({...c,spent:spendMap[c.id]?+spendMap[c.id].spent:0})).filter(c=>c.spent>0||catSpending.length===0);
   if(rows.length===0){grid.innerHTML='';return;}
-  grid.innerHTML=rows.map(c=>{const pct=pot>0?(c.spent/pot*100):0;return `<div class="cat-card"><div class="cat-fill" style="height:${Math.min(pct*2,80)}%;background:${c.color}"></div><div style="position:relative"><div class="cat-top"><span class="cat-icon">${c.icon}</span><span class="cat-name">${c.name}</span></div><div class="cat-spent" style="color:${c.color}">${fmt(c.spent)}</div><div class="cat-pct">${pct.toFixed(1)}% of pot</div><div class="cat-bar"><div class="cat-bar-fill" style="width:${Math.min(pct*2,100)}%;background:${c.color}"></div></div></div></div>`;}).join('');
+  grid.innerHTML=rows.map(c=>{const pct=pot>0?(c.spent/pot*100):0;const active=c.id===catFilter;return `<div class="cat-card ${active?'active':''}" onclick="toggleCatFilter('${c.id}')"><div class="cat-fill" style="height:${Math.min(pct*2,80)}%;background:${c.color}"></div><div style="position:relative"><div class="cat-top"><span class="cat-icon">${c.icon}</span><span class="cat-name">${c.name}</span></div><div class="cat-spent" style="color:${c.color}">${fmt(c.spent)}</div><div class="cat-pct">${pct.toFixed(1)}% of pot</div><div class="cat-bar"><div class="cat-bar-fill" style="width:${Math.min(pct*2,100)}%;background:${c.color}"></div></div></div></div>`;}).join('');
+}
+function toggleCatFilter(id){
+  catFilter=(catFilter===id)?null:id;
+  if(state.view==='history-detail'){renderCatCards(state.historyDetailCats,state.historyDetailSummary?+state.historyDetailSummary.total_pot:0);renderTxnList(state.historyDetailTxns,'hdTxnList');}
+  else{renderCatCards(state.catSpending,state.summary?+state.summary.total_pot:0);renderTxnList(state.transactions,'txnList');}
 }
 function renderTxnList(txns,containerId){
   const el=$(containerId);if(!el)return;
   txns=(txns||[]).filter(t=>!pendingTxnGroups.has(t.group_id));
-  if(txns.length===0){el.innerHTML='<div class="empty-txn">No spending logged yet.</div>';return;}
+  if(catFilter){
+    const matchingGroups=new Set(txns.filter(t=>t.category_id===catFilter).map(t=>t.group_id));
+    txns=txns.filter(t=>matchingGroups.has(t.group_id));
+  }
+  if(txns.length===0){el.innerHTML=`<div class="empty-txn">${catFilter?'No transactions in this category.':'No spending logged yet.'}</div>`;return;}
   const groups={};txns.forEach(t=>{if(!groups[t.group_id])groups[t.group_id]=[];groups[t.group_id].push(t);});
   const orderedGroups=Object.values(groups).sort((a,b)=>new Date(b[0].created_at)-new Date(a[0].created_at));
   el.innerHTML=orderedGroups.map(group=>{
@@ -399,7 +411,7 @@ function renderVendorChips(){
   const chips=(state.topVendors||[]).slice(0,5);
   if(!chips.length){el.style.display='none';el.innerHTML='';return;}
   el.style.display='flex';
-  el.innerHTML=chips.map((v,i)=>`<button type="button" class="vchip" onmousedown="event.preventDefault()" onclick="pickVendorChip(${i})">${esc(v)}</button>`).join('');
+  el.innerHTML=chips.map((v,i)=>`<button type="button" class="vchip" onmousedown="event.preventDefault()" onclick="pickVendorChip(${i})">${esc(toInitCap(v))}</button>`).join('');
 }
 function pickVendorChip(i){const v=(state.topVendors||[])[i];if(v==null)return;selectVendor(v);}
 function renderSplitRows(){
@@ -409,7 +421,7 @@ function addSplitRow(){splitRows.push({category_id:state.categories[0]?.id||'',a
 function removeSplitRow(i){splitRows.splice(i,1);renderSplitRows();updateSplitHint();}
 function updateSplitHint(){const hint=$('splitHint');if(splitRows.length<2){hint.textContent='';return;}const total=splitRows.reduce((s,r)=>s+(parseFloat(r.amount)||0),0);hint.textContent=`Split total: ${fmt(total)}`;hint.className='split-total-hint';}
 async function submitTransaction(){
-  const vendor=$('txnVendor').value.trim();const desc=$('txnDesc').value.trim();const date=$('txnDate').value;
+  const vendor=toInitCap($('txnVendor').value.trim());const desc=$('txnDesc').value.trim();const date=$('txnDate').value;
   const rows=splitRows.map(r=>({category_id:r.category_id,amount:parseFloat(r.amount)||0})).filter(r=>r.amount>0);
   if(!rows.length){showToast('Enter an amount');return;}if(!vendor){showToast('Enter a vendor');return;}
   const btn=$('txnSubmitBtn');btn.disabled=true;btn.textContent='Saving…';
@@ -468,10 +480,10 @@ async function commitPendingTxnDeletes(){
 }
 let acHideTimer=null;
 let acMatches=[];
-function onVendorInput(val){const list=$('acList');if(!val){list.style.display='none';return;}const q=val.toLowerCase();acMatches=state.vendorNames.filter(v=>v.includes(q)).slice(0,6);if(!acMatches.length){list.style.display='none';return;}list.innerHTML=acMatches.map((v,i)=>`<div class="autocomplete-item" onmousedown="selectVendorIdx(${i})">${esc(v)}</div>`).join('');list.style.display='block';}
+function onVendorInput(val){const list=$('acList');if(!val){list.style.display='none';return;}const q=val.toLowerCase();acMatches=state.vendorNames.filter(v=>v.includes(q)).slice(0,6);if(!acMatches.length){list.style.display='none';return;}list.innerHTML=acMatches.map((v,i)=>`<div class="autocomplete-item" onmousedown="selectVendorIdx(${i})">${esc(toInitCap(v))}</div>`).join('');list.style.display='block';}
 function selectVendorIdx(i){if(acMatches[i]!=null)selectVendor(acMatches[i]);}
 function hideAC(){acHideTimer=setTimeout(()=>{$('acList').style.display='none';},150);}
-function selectVendor(vkey){clearTimeout(acHideTimer);$('txnVendor').value=vkey;$('acList').style.display='none';const catId=state.vendorMap[vkey];if(catId&&splitRows.length===1){splitRows[0].category_id=catId;renderSplitRows();}if(!matchMedia('(hover:hover)').matches){const amtInput=document.querySelector('#splitRows .split-row input[type="number"]');if(amtInput)amtInput.focus();}}
+function selectVendor(vkey){clearTimeout(acHideTimer);$('txnVendor').value=toInitCap(vkey);$('acList').style.display='none';const catId=state.vendorMap[vkey];if(catId&&splitRows.length===1){splitRows[0].category_id=catId;renderSplitRows();}if(!matchMedia('(hover:hover)').matches){const amtInput=document.querySelector('#splitRows .split-row input[type="number"]');if(amtInput)amtInput.focus();}}
 async function renderHistoryList(){
   $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span><span class="ver">v${APP_VERSION}</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab active" data-v="history" onclick="showTab('history')">History</button></div><div style="display:flex;gap:6px"><button class="btn-icon" onclick="forceRefresh()">↻</button><button class="btn-icon" onclick="showTab('settings')">⚙</button></div></nav><div class="history-view"><div class="section-label" style="margin-bottom:14px">All Weeks</div><div id="hwList"><div style="color:var(--muted);font-size:.84rem">Loading…</div></div></div>`;
   const {data:sums}=await sb.from('week_summary').select('*').order('start_date',{ascending:false});
@@ -479,6 +491,7 @@ async function renderHistoryList(){
   list.innerHTML=sums.map(s=>{const rem=+s.remaining;return `<div class="hw-card" onclick="openHistoryDetail('${s.start_date}')"><div><div class="hw-range">${fmtRange(s.start_date)}${isCurrentWeek(s.start_date)?' <span style="color:var(--teal-text);font-size:.72rem">NOW</span>':''}</div><div class="hw-sub">${fmt(+s.total_spent)} spent of ${fmt(+s.total_pot)}</div></div><div><div class="hw-stat-val ${rem<0?'neg':'pos'}">${fmt(rem)}</div><div class="hw-stat-sub">${rem<0?'over':'left'}</div></div></div>`;}).join('');
 }
 async function openHistoryDetail(startDate){
+  if(state.historyDetailWeek!==startDate)catFilter=null;
   state.view='history-detail';state.historyDetailWeek=startDate;
   const wRow=state.weeks.find(w=>w.start_date===startDate);let txns=[],cats=[],summ=null;
   if(wRow){const[{data:t},{data:c},{data:sv}]=await Promise.all([sb.from('transactions').select('*,categories(name,icon,color)').eq('week_id',wRow.id).order('created_at',{ascending:false}),sb.from('category_spending').select('*').eq('week_id',wRow.id).order('sort_order'),sb.from('week_summary').select('*').eq('id',wRow.id).single()]);txns=t||[];cats=c||[];summ=sv||null;}
