@@ -149,28 +149,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 @media(max-width:400px){.cat-grid{grid-template-columns:1fr 1fr;}.hero-stats{gap:16px;}.hstat-val{font-size:1.1rem;}.hstat-hero-val{font-size:1.7rem;}.week-range{font-size:1.2rem;}}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 </style>
-<script>
-(function(){
-  const c=document.createElement('canvas');c.width=180;c.height=180;
-  const x=c.getContext('2d');
-  x.fillStyle='#0F2A2B';x.fillRect(0,0,180,180);
-  x.fillStyle='#EAF7F6';
-  x.beginPath();x.roundRect(20,45,140,100,8);x.fill();
-  x.fillStyle='#00CED1';
-  x.beginPath();x.moveTo(20,45);x.lineTo(90,100);x.lineTo(160,45);x.closePath();x.fill();
-  x.strokeStyle='#00CED1';x.lineWidth=2;
-  x.beginPath();x.moveTo(20,145);x.lineTo(65,100);x.stroke();
-  x.beginPath();x.moveTo(160,145);x.lineTo(115,100);x.stroke();
-  x.fillStyle='#FF6B35';
-  x.beginPath();x.arc(130,130,32,0,Math.PI*2);x.fill();
-  x.fillStyle='#1A0D06';
-  x.font='bold 36px Arial';x.textAlign='center';x.textBaseline='middle';
-  x.fillText('$',130,132);
-  const link=document.createElement('link');
-  link.rel='apple-touch-icon';link.href=c.toDataURL('image/png');
-  document.head.appendChild(link);
-})();
-</script>
+<link rel="apple-touch-icon" href="apple-touch-icon-180.png">
+<link rel="manifest" href="manifest.json">
 </head>
 <body>
 <script>
@@ -208,7 +188,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js"></script>
 <script>
 let sb,session;
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],categoriesById:{},currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 let catFilter=null;
 const $=id=>document.getElementById(id);
