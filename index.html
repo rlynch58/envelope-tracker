@@ -31,6 +31,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .hstat{text-align:right;}
 .hstat-label{font-size:.68rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
 .hstat-val{font-family:var(--fg);font-size:1.35rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.04em;line-height:1;}
+.hstat-hero{text-align:right;}
+.hstat-hero-val{font-family:var(--fg);font-size:2.3rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.05em;line-height:1;}
+.hstat-spent-line{margin-top:9px;font-size:.8rem;font-variant-numeric:tabular-nums;}
+.hstat-spent-label{color:var(--muted);font-weight:500;}
+.hstat-spent-val{font-family:var(--fg);font-weight:700;}
 .pos{color:var(--teal-text);}.neg{color:var(--red);}.neu{color:var(--text);}
 .pot-bar-wrap{margin:0 20px 20px;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;}
 .pot-bar-row{display:flex;align-items:center;gap:14px;}
@@ -102,6 +107,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .field{margin-bottom:14px;}
 .field label{display:block;font-size:.7rem;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
 .field input,.field select{width:100%;padding:10px 13px;background:var(--elevated);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--fb);font-size:.92rem;outline:none;transition:border-color .15s;appearance:none;-webkit-appearance:none;}
+.date-collapsed{font-family:var(--fb);font-size:.86rem;color:var(--muted);cursor:pointer;padding:2px 0;}
+.date-collapsed .date-change{color:var(--teal-text);font-weight:700;}
+.date-collapsed:hover .date-change{text-decoration:underline;}
 .field input:focus,.field select:focus{border-color:var(--teal);}
 .field input::placeholder{color:var(--muted);}
 .frow{display:flex;gap:10px;}
@@ -136,8 +144,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .login-sub{color:var(--muted);font-size:.86rem;margin-bottom:28px;}
 .login-form{width:100%;max-width:340px;}
 .login-err{color:var(--red);font-size:.8rem;margin-bottom:10px;min-height:18px;}
-@media(min-width:640px){.cat-grid{grid-template-columns:repeat(4,1fr);}.hero{padding:28px 28px 18px;}.pot-bar-wrap,.add-row,.txn-section,.cat-grid,.init-banner{padding-left:28px;padding-right:28px;}}
-@media(max-width:400px){.cat-grid{grid-template-columns:1fr 1fr;}.hero-stats{gap:16px;}.hstat-val{font-size:1.1rem;}}
+@media(min-width:640px){.cat-grid{grid-template-columns:repeat(4,1fr);}.hero{padding:28px 28px 18px;}.pot-bar-wrap,.add-row,.txn-section,.cat-grid,.init-banner{padding-left:28px;padding-right:28px;}.hstat-hero-val{font-size:2.9rem;}}
+@media(max-width:480px){.hero{flex-direction:column;align-items:flex-start;}.hero-stats{width:100%;}.hstat-hero,.hstat-spent-line{text-align:left;}}
+@media(max-width:400px){.cat-grid{grid-template-columns:1fr 1fr;}.hero-stats{gap:16px;}.hstat-val{font-size:1.1rem;}.hstat-hero-val{font-size:2rem;}}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 </style>
 <script>
@@ -175,7 +184,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
     <div class="modal-title"><span id="txnModalTitle">Log Spending</span><button class="modal-close" onclick="closeOverlay('txnOverlay')">✕</button></div>
     <div class="field"><label>Vendor / Retailer</label><div class="vendor-chips" id="vendorChips" style="display:none"></div><div class="vendor-wrap"><input type="text" id="txnVendor" placeholder="e.g. HEB, Whataburger" autocomplete="off" oninput="onVendorInput(this.value)" onblur="hideAC()"><div class="autocomplete-list" id="acList" style="display:none"></div></div></div>
     <div class="field"><label>Description (optional)</label><input type="text" id="txnDesc" placeholder="e.g. weekly groceries"></div>
-    <div class="field"><label>Date</label><input type="date" id="txnDate"></div>
+    <div class="field"><label>Date</label><div class="date-collapsed" id="dateCollapsed" onclick="expandDate()"><span id="dateCollapsedText"></span> · <span class="date-change">change</span></div><input type="date" id="txnDate" style="display:none"></div>
     <div class="split-rows" id="splitRows"></div>
     <div class="split-total-hint" id="splitHint"></div>
     <button class="split-add" onclick="addSplitRow()">+ split across another category</button>
@@ -207,6 +216,7 @@ const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 function saturday(d=new Date()){const dt=new Date(d);dt.setHours(0,0,0,0);const dow=dt.getDay();dt.setDate(dt.getDate()-((dow+1)%7));return dt;}
 function dateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function fmtRange(start){const s=new Date(start+'T00:00:00');const e=new Date(s);e.setDate(e.getDate()+6);const mo=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});return mo(s)+' – '+mo(e);}
+function fmtDateShort(dstr){return new Date(dstr+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function isCurrentWeek(startDate){return startDate===dateStr(saturday());}
 function showToast(msg,undoFn){
   const t=$('toast');clearTimeout(t._hideTimer);
@@ -285,7 +295,7 @@ function renderDashboard(){
   const pot=s?+s.total_pot:0;const spent=s?+s.total_spent:0;const rem=s?+s.remaining:0;
   const pct=pot>0?Math.min(spent/pot*100,100):0;const isOver=rem<0;const weekExists=!!state.currentWeek;
   $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span><span class="ver">v${APP_VERSION}</span></div><div class="tabs"><button class="tab active" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab" data-v="history" onclick="showTab('history')">History</button></div><div style="display:flex;gap:6px"><button class="btn-icon" onclick="forceRefresh()">↻</button><button class="btn-icon" onclick="showTab('settings')">⚙</button></div></nav>
-  <div class="hero"><div class="hero-left"><div class="week-label">Week of</div><div class="week-range">${fmtRange(wStr)}</div><div class="week-nav"><button onclick="prevWeek()">←</button>${isCur?'<span class="now-badge">NOW</span>':''}<button onclick="nextWeek()" ${isCur?'disabled':''}>→</button></div></div>${weekExists?`<div class="hero-stats"><div class="hstat"><div class="hstat-label">Spent</div><div class="hstat-val neu">${fmt(spent)}</div></div><div class="hstat"><div class="hstat-label">Left</div><div class="hstat-val ${isOver?'neg':'pos'}">${fmt(rem)}</div></div></div>`:''}</div>
+  <div class="hero"><div class="hero-left"><div class="week-label">Week of</div><div class="week-range">${fmtRange(wStr)}</div><div class="week-nav"><button onclick="prevWeek()">←</button>${isCur?'<span class="now-badge">NOW</span>':''}<button onclick="nextWeek()" ${isCur?'disabled':''}>→</button></div></div>${weekExists?`<div class="hero-stats"><div class="hstat-hero"><div class="hstat-label">Left</div><div class="hstat-hero-val ${isOver?'neg':'pos'}">${fmt(rem)}</div><div class="hstat-spent-line"><span class="hstat-spent-label">Spent</span> <span class="hstat-spent-val neu">${fmt(spent)}</span></div></div></div>`:''}</div>
   ${weekExists?`<div class="pot-bar-wrap"><div class="pot-bar-row"><span class="pot-bar-label">$0</span><div class="pot-bar-outer"><div class="pot-bar-pct ${isOver?'over':''}" style="left:${Math.min(Math.max(pct,6),98)}%">${pct.toFixed(1)}%</div><div class="pot-bar"><div class="pot-bar-fill ${isOver?'over':''}" style="width:${pct}%"></div></div></div><span class="pot-bar-label ${isOver?'neg':'neu'}">${fmt(pot)}${s&&+s.rollover>0?'*':''}</span></div>${s&&+s.rollover>0?`<div style="font-size:.74rem;color:var(--amber);margin-top:10px;">* includes ${fmt(+s.rollover)} rollover from last week</div>`:''}</div>`:'' }
   ${!weekExists&&isCur?`<div class="init-banner"><div><div class="init-banner-text">📅 Set up Week of ${fmtRange(wStr)}</div><div style="font-size:.78rem;color:var(--muted);margin-top:3px;">${fmt(parseFloat(state.settings.weekly_budget)||600)} budget${pendingRollover>0?` · +${fmt(pendingRollover)} rollover from last week`:''}</div></div><div style="display:flex;gap:12px;align-items:center;flex-shrink:0;"><button class="btn-amber" onclick="oneTapStartWeek()">Start Week</button><span style="font-size:.78rem;color:var(--muted);text-decoration:underline;cursor:pointer;white-space:nowrap;" onclick="openInitWeek()">Customize</span></div></div>`:''}
   ${!weekExists&&!isCur?`<div class="init-banner"><div class="init-banner-text">No data for this week.</div></div>`:''}
@@ -308,7 +318,7 @@ function renderTxnList(txns,containerId){
   const orderedGroups=Object.values(groups).sort((a,b)=>new Date(b[0].created_at)-new Date(a[0].created_at));
   el.innerHTML=orderedGroups.map(group=>{
     const isSplit=group.length>1;const total=group.reduce((s,t)=>s+(+t.amount),0);const first=group[0];const cat=first.categories;
-    const dateLabel=new Date(first.txn_date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const dateLabel=fmtDateShort(first.txn_date);
     if(!isSplit){return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:${cat?.color||'var(--muted)'}"></div><div class="txn-main"><div class="txn-vendor">${esc(first.vendor||cat?.name||'—')}</div><div class="txn-meta">${cat?.icon||''} ${esc(cat?.name||'')}</div></div><div class="txn-right"><div class="txn-amount">-${fmt(+first.amount)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-edit" onclick="openEditTxn('${first.group_id}')">Edit</button><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div></div>`;}
     const splitLines=group.map(t=>`<div class="split-line"><div class="txn-dot" style="background:${t.categories?.color||'var(--muted)'}"></div><div class="txn-cat-name">${t.categories?.icon||''} ${t.categories?.name||''}</div><div class="txn-amount">-${fmt(+t.amount)}</div></div>`).join('');
     return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:var(--muted)"></div><div class="txn-main"><div class="txn-vendor">${esc(first.vendor||'Split transaction')}<span class="txn-split-badge">split</span></div>${first.description?`<div class="txn-meta">${esc(first.description)}</div>`:''}</div><div class="txn-right"><div class="txn-amount">-${fmt(total)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-edit" onclick="openEditTxn('${first.group_id}')">Edit</button><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div>${splitLines}</div>`;
@@ -361,7 +371,8 @@ let editingGroupId=null,editingWeekId=null;
 function openAddTxn(){
   if(!state.currentWeek)return;
   editingGroupId=null;editingWeekId=null;$('txnModalTitle').textContent='Log Spending';
-  $('txnVendor').value='';$('txnDesc').value='';$('txnDate').value=dateStr(new Date());
+  $('txnVendor').value='';$('txnDesc').value='';
+  const todayStr=dateStr(new Date());$('txnDate').value=todayStr;showDateCollapsed(todayStr);
   splitRows=[{category_id:state.categories[0]?.id||'',amount:''}];renderSplitRows();updateSplitHint();
   renderVendorChips();
   openOverlay('txnOverlay');
@@ -376,11 +387,14 @@ function openEditTxn(groupId){
   $('txnVendor').value=rows[0].vendor||'';
   $('txnDesc').value=rows[0].description||'';
   $('txnDate').value=rows[0].txn_date;
+  if(rows[0].txn_date===dateStr(new Date()))showDateCollapsed(rows[0].txn_date);else expandDate();
   splitRows=rows.map(r=>({category_id:r.category_id,amount:String(r.amount)}));
   renderSplitRows();updateSplitHint();
   renderVendorChips();
   openOverlay('txnOverlay');
 }
+function showDateCollapsed(dstr){$('dateCollapsedText').textContent=fmtDateShort(dstr);$('dateCollapsed').style.display='block';$('txnDate').style.display='none';}
+function expandDate(){$('dateCollapsed').style.display='none';$('txnDate').style.display='block';$('txnDate').focus();if(typeof $('txnDate').showPicker==='function'){try{$('txnDate').showPicker();}catch(e){}}}
 function renderVendorChips(){
   const el=$('vendorChips');if(!el)return;
   const chips=(state.topVendors||[]).slice(0,5);
