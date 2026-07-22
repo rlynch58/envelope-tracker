@@ -119,6 +119,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .split-remove{width:24px;height:24px;border:1px solid var(--border);border-radius:5px;background:transparent;color:var(--muted);cursor:pointer;font-size:.8rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;align-self:flex-end;margin-bottom:1px;}
 .split-remove:hover{color:var(--red);border-color:var(--red);}
 .split-total-hint{font-size:.74rem;color:var(--muted);margin-bottom:10px;font-variant-numeric:tabular-nums;}
+.vendor-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.vchip{padding:5px 12px;background:var(--elevated);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-family:var(--fb);font-size:.78rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.vchip:hover{border-color:var(--teal);color:var(--teal-text);}
 .vendor-wrap{position:relative;}
 .autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--elevated);border:1px solid var(--teal);border-radius:0 0 var(--rs) var(--rs);z-index:200;max-height:160px;overflow-y:auto;}
 .autocomplete-item{padding:9px 13px;font-size:.88rem;cursor:pointer;transition:background .1s;}
@@ -170,7 +173,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <div class="overlay" id="txnOverlay">
   <div class="modal">
     <div class="modal-title"><span id="txnModalTitle">Log Spending</span><button class="modal-close" onclick="closeOverlay('txnOverlay')">✕</button></div>
-    <div class="field"><label>Vendor / Retailer</label><div class="vendor-wrap"><input type="text" id="txnVendor" placeholder="e.g. HEB, Whataburger" autocomplete="off" oninput="onVendorInput(this.value)" onblur="hideAC()"><div class="autocomplete-list" id="acList" style="display:none"></div></div></div>
+    <div class="field"><label>Vendor / Retailer</label><div class="vendor-chips" id="vendorChips" style="display:none"></div><div class="vendor-wrap"><input type="text" id="txnVendor" placeholder="e.g. HEB, Whataburger" autocomplete="off" oninput="onVendorInput(this.value)" onblur="hideAC()"><div class="autocomplete-list" id="acList" style="display:none"></div></div></div>
     <div class="field"><label>Description (optional)</label><input type="text" id="txnDesc" placeholder="e.g. weekly groceries"></div>
     <div class="field"><label>Date</label><input type="date" id="txnDate"></div>
     <div class="split-rows" id="splitRows"></div>
@@ -239,6 +242,14 @@ async function loadMeta(){
   const {data:sv}=await sb.from('settings').select('*');(sv||[]).forEach(r=>{state.settings[r.key]=r.value;});
   const {data:vm}=await sb.from('vendor_category_map').select('*');state.vendorMap={};state.vendorNames=[];
   (vm||[]).forEach(r=>{state.vendorMap[r.vendor_key]=r.category_id;state.vendorNames.push(r.vendor_key);});state.vendorNames.sort();
+  await computeTopVendors();
+}
+function normVendorKey(v){return (v||'').replace(/[‘’ʼ＇]/g,"'").replace(/\s+/g,' ').trim().toLowerCase();}
+async function computeTopVendors(){
+  const {data:vtx}=await sb.from('transactions').select('vendor').not('vendor','is',null);
+  const counts={};
+  (vtx||[]).forEach(r=>{const k=normVendorKey(r.vendor);if(!k)return;counts[k]=(counts[k]||0)+1;});
+  state.topVendors=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]).slice(0,5);
 }
 async function loadWeekData(startDate){
   const cw=state.weeks.find(w=>w.start_date===startDate);state.currentWeek=cw||null;
@@ -352,6 +363,7 @@ function openAddTxn(){
   editingGroupId=null;editingWeekId=null;$('txnModalTitle').textContent='Log Spending';
   $('txnVendor').value='';$('txnDesc').value='';$('txnDate').value=dateStr(new Date());
   splitRows=[{category_id:state.categories[0]?.id||'',amount:''}];renderSplitRows();updateSplitHint();
+  renderVendorChips();
   openOverlay('txnOverlay');
   if(matchMedia('(hover:hover)').matches) setTimeout(()=>$('txnVendor').focus(),120);
 }
@@ -366,8 +378,17 @@ function openEditTxn(groupId){
   $('txnDate').value=rows[0].txn_date;
   splitRows=rows.map(r=>({category_id:r.category_id,amount:String(r.amount)}));
   renderSplitRows();updateSplitHint();
+  renderVendorChips();
   openOverlay('txnOverlay');
 }
+function renderVendorChips(){
+  const el=$('vendorChips');if(!el)return;
+  const chips=(state.topVendors||[]).slice(0,5);
+  if(!chips.length){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='flex';
+  el.innerHTML=chips.map((v,i)=>`<button type="button" class="vchip" onmousedown="event.preventDefault()" onclick="pickVendorChip(${i})">${esc(v)}</button>`).join('');
+}
+function pickVendorChip(i){const v=(state.topVendors||[])[i];if(v==null)return;selectVendor(v);}
 function renderSplitRows(){
   $('splitRows').innerHTML=splitRows.map((r,i)=>`<div class="split-row"><div class="field"><label>Category</label><select onchange="splitRows[${i}].category_id=this.value">${state.categories.map(c=>`<option value="${c.id}" ${c.id===r.category_id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select></div><div class="field"><label>Amount ($)</label><input type="number" value="${r.amount}" placeholder="0.00" step="0.01" min="0.01" oninput="splitRows[${i}].amount=this.value;updateSplitHint()"></div>${splitRows.length>1?`<button class="split-remove" onclick="removeSplitRow(${i})">✕</button>`:''}</div>`).join('');
 }
@@ -391,6 +412,7 @@ async function submitTransaction(){
     if(!state.vendorMap[vkey]){state.vendorNames.push(vkey);state.vendorNames.sort();}
     state.vendorMap[vkey]=rows[0].category_id;
     editingGroupId=null;editingWeekId=null;
+    await computeTopVendors();
     btn.disabled=false;btn.textContent='Save';closeOverlay('txnOverlay');showToast('Updated ✓');
     if(state.view==='history-detail')openHistoryDetail(state.historyDetailWeek);else render();
     return;
@@ -402,6 +424,7 @@ async function submitTransaction(){
   await sb.from('vendor_category_map').upsert({vendor_key:vkey,category_id:rows[0].category_id,user_id:session.user.id,updated_at:new Date().toISOString()});
   if(!state.vendorMap[vkey]){state.vendorNames.push(vkey);state.vendorNames.sort();}
   state.vendorMap[vkey]=rows[0].category_id;
+  await computeTopVendors();
   btn.disabled=false;btn.textContent='Save';closeOverlay('txnOverlay');showToast('Logged ✓');render();
 }
 const pendingTxnGroups=new Set();
