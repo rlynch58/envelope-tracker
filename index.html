@@ -208,7 +208,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js"></script>
 <script>
 let sb,session;
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 let catFilter=null;
 const $=id=>document.getElementById(id);
@@ -239,7 +239,7 @@ function openOverlay(id){$(id).classList.add('open');}
 function closeOverlay(id){$(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
 function initSB(){sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);return true;}
-async function forceRefresh(){await loadMeta();await loadWeekData(dateStr(state.weekStart));if(state.view==='dashboard')renderDashboard();else if(state.view==='history')renderHistoryList();else if(state.view==='settings')renderSettings();}
+async function forceRefresh(){await loadMeta();await loadWeekData(dateStr(state.weekStart));if(state.view==='dashboard')renderDashboard();else if(state.view==='history')renderHistoryList();else if(state.view==='history-detail')await openHistoryDetail(state.historyDetailWeek);else if(state.view==='settings')renderSettings();}
 async function boot(){
   initSB();
   $('app').innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;"><div style="color:var(--muted);font-size:.9rem">Loading…</div></div>';
@@ -310,7 +310,7 @@ function renderCatCards(catSpending,pot){
   const spendMap={};catSpending.forEach(c=>{spendMap[c.category_id]=c;});
   const rows=state.categories.map(c=>({...c,spent:spendMap[c.id]?+spendMap[c.id].spent:0})).filter(c=>c.spent>0||catSpending.length===0);
   if(rows.length===0){grid.innerHTML='';return;}
-  grid.innerHTML=rows.map(c=>{const pct=pot>0?(c.spent/pot*100):0;const active=c.id===catFilter;return `<div class="cat-card ${active?'active':''}" onclick="toggleCatFilter('${c.id}')"><div class="cat-fill" style="height:${Math.min(pct*2,80)}%;background:${c.color}"></div><div style="position:relative"><div class="cat-top"><span class="cat-icon">${c.icon}</span><span class="cat-name">${c.name}</span></div><div class="cat-spent" style="color:${c.color}">${fmt(c.spent)}</div><div class="cat-pct">${pct.toFixed(1)}% of pot</div><div class="cat-bar"><div class="cat-bar-fill" style="width:${Math.min(pct*2,100)}%;background:${c.color}"></div></div></div></div>`;}).join('');
+  grid.innerHTML=rows.map(c=>{const pct=pot>0?(c.spent/pot*100):0;const active=c.id===catFilter;return `<div class="cat-card ${active?'active':''}" onclick="toggleCatFilter('${c.id}')"><div class="cat-fill" style="height:${Math.min(pct*2,80)}%;background:${c.color}"></div><div style="position:relative"><div class="cat-top"><span class="cat-icon">${c.icon}</span><span class="cat-name">${esc(c.name)}</span></div><div class="cat-spent" style="color:${c.color}">${fmt(c.spent)}</div><div class="cat-pct">${pct.toFixed(1)}% of pot</div><div class="cat-bar"><div class="cat-bar-fill" style="width:${Math.min(pct*2,100)}%;background:${c.color}"></div></div></div></div>`;}).join('');
 }
 function toggleCatFilter(id){
   catFilter=(catFilter===id)?null:id;
@@ -331,12 +331,12 @@ function renderTxnList(txns,containerId){
     const isSplit=group.length>1;const total=group.reduce((s,t)=>s+(+t.amount),0);const first=group[0];const cat=first.categories;
     const dateLabel=fmtDateShort(first.txn_date);
     if(!isSplit){return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:${cat?.color||'var(--muted)'}"></div><div class="txn-main"><div class="txn-vendor">${esc(first.vendor||cat?.name||'—')}</div><div class="txn-meta">${cat?.icon||''} ${esc(cat?.name||'')}</div></div><div class="txn-right"><div class="txn-amount">-${fmt(+first.amount)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-edit" onclick="openEditTxn('${first.group_id}')">Edit</button><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div></div>`;}
-    const splitLines=group.map(t=>`<div class="split-line"><div class="txn-dot" style="background:${t.categories?.color||'var(--muted)'}"></div><div class="txn-cat-name">${t.categories?.icon||''} ${t.categories?.name||''}</div><div class="txn-amount">-${fmt(+t.amount)}</div></div>`).join('');
+    const splitLines=group.map(t=>`<div class="split-line"><div class="txn-dot" style="background:${t.categories?.color||'var(--muted)'}"></div><div class="txn-cat-name">${t.categories?.icon||''} ${esc(t.categories?.name||'')}</div><div class="txn-amount">-${fmt(+t.amount)}</div></div>`).join('');
     return `<div class="txn-group"><div class="txn-row"><div class="txn-dot" style="background:var(--muted)"></div><div class="txn-main"><div class="txn-vendor">${esc(first.vendor||'Split transaction')}<span class="txn-split-badge">split</span></div>${first.description?`<div class="txn-meta">${esc(first.description)}</div>`:''}</div><div class="txn-right"><div class="txn-amount">-${fmt(total)}</div><div class="txn-date">${dateLabel}</div></div><button class="txn-edit" onclick="openEditTxn('${first.group_id}')">Edit</button><button class="txn-del" onclick="deleteGroup('${first.group_id}')">✕</button></div>${splitLines}</div>`;
   }).join('');
 }
-function prevWeek(){const d=new Date(state.weekStart);d.setDate(d.getDate()-7);state.weekStart=d;render();}
-function nextWeek(){const today=saturday();const d=new Date(state.weekStart);d.setDate(d.getDate()+7);if(d>today)return;state.weekStart=d;render();}
+function prevWeek(){catFilter=null;const d=new Date(state.weekStart);d.setDate(d.getDate()-7);state.weekStart=d;render();}
+function nextWeek(){const today=saturday();const d=new Date(state.weekStart);d.setDate(d.getDate()+7);if(d>today)return;catFilter=null;state.weekStart=d;render();}
 let pendingRollover=0,applyRollover=true;
 async function computePendingRollover(){
   const prevSat=new Date(state.weekStart);prevSat.setDate(prevSat.getDate()-7);
@@ -415,7 +415,7 @@ function renderVendorChips(){
 }
 function pickVendorChip(i){const v=(state.topVendors||[])[i];if(v==null)return;selectVendor(v);}
 function renderSplitRows(){
-  $('splitRows').innerHTML=splitRows.map((r,i)=>`<div class="split-row"><div class="field"><label>Category</label><select onchange="splitRows[${i}].category_id=this.value">${state.categories.map(c=>`<option value="${c.id}" ${c.id===r.category_id?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select></div><div class="field"><label>Amount ($)</label><input type="number" inputmode="decimal" value="${r.amount}" placeholder="0.00" step="0.01" min="0.01" oninput="splitRows[${i}].amount=this.value;updateSplitHint()"></div>${splitRows.length>1?`<button class="split-remove" onclick="removeSplitRow(${i})">✕</button>`:''}</div>`).join('');
+  $('splitRows').innerHTML=splitRows.map((r,i)=>`<div class="split-row"><div class="field"><label>Category</label><select onchange="splitRows[${i}].category_id=this.value">${state.categories.map(c=>`<option value="${c.id}" ${c.id===r.category_id?'selected':''}>${c.icon} ${esc(c.name)}</option>`).join('')}</select></div><div class="field"><label>Amount ($)</label><input type="number" inputmode="decimal" value="${r.amount}" placeholder="0.00" step="0.01" min="0.01" oninput="splitRows[${i}].amount=this.value;updateSplitHint()"></div>${splitRows.length>1?`<button class="split-remove" onclick="removeSplitRow(${i})">✕</button>`:''}</div>`).join('');
 }
 function addSplitRow(){splitRows.push({category_id:state.categories[0]?.id||'',amount:''});renderSplitRows();updateSplitHint();}
 function removeSplitRow(i){splitRows.splice(i,1);renderSplitRows();updateSplitHint();}
@@ -512,7 +512,7 @@ function renderSettings(){
   $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span><span class="ver">v${APP_VERSION}</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab" data-v="history" onclick="showTab('history')">History</button></div><button class="btn-icon" onclick="showTab('settings')" style="background:var(--teal);color:var(--action-text)">⚙</button></nav>
   <div class="settings-view">
     <div class="settings-section"><div class="settings-title">Default Weekly Budget</div><div class="field"><label>Amount ($)</label><input type="number" id="defBudgetInput" value="${defBudget}" step="1" min="1"></div><button class="btn-primary" onclick="saveDefBudget()">Save Default</button></div>
-    <div class="settings-section"><div class="settings-title">Categories</div>${state.categories.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px"><span>${c.icon}</span><span style="flex:1;font-size:.88rem">${c.name}</span><span style="width:14px;height:14px;border-radius:50%;background:${c.color};display:inline-block;flex-shrink:0"></span></div>`).join('')}
+    <div class="settings-section"><div class="settings-title">Categories</div>${state.categories.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px"><span>${c.icon}</span><span style="flex:1;font-size:.88rem">${esc(c.name)}</span><span style="width:14px;height:14px;border-radius:50%;background:${c.color};display:inline-block;flex-shrink:0"></span></div>`).join('')}
     <div style="margin-top:14px"><div class="settings-title">Add Category</div><div class="frow"><div class="field"><label>Name</label><input type="text" id="newCatName" placeholder="Entertainment"></div><div class="field" style="flex:0 0 70px"><label>Icon</label><input type="text" id="newCatIcon" placeholder="🎮" maxlength="2"></div><div class="field" style="flex:0 0 60px"><label>Color</label><input type="color" id="newCatColor" value="#A8E63D" style="height:42px;padding:3px"></div></div><button class="btn-primary" onclick="addCategory()">Add</button></div></div>
     <div class="settings-section"><div class="settings-title">Vendor Memory</div><div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">${state.vendorNames.length} vendor${state.vendorNames.length!==1?'s':''} learned.</div>${state.vendorNames.slice(0,10).map((v,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:.82rem">${esc(v)}</span><span style="font-size:.78rem;color:var(--muted)">${esc(state.categories.find(c=>c.id===state.vendorMap[v])?.name||'')}</span><button onclick="forgetVendorIdx(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.78rem">forget</button></div>`).join('')}</div>
     <div class="settings-section"><div class="settings-title">Account</div><button class="btn-primary" style="background:var(--elevated);color:var(--text);border:1px solid var(--border)" onclick="doSignOut()">Sign Out</button></div>
