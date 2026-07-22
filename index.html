@@ -208,8 +208,8 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js"></script>
 <script>
 let sb,session;
-const APP_VERSION = '1.5';
-const state={view:'dashboard',weekStart:null,weeks:[],categories:[],currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
+const APP_VERSION = '1.6';
+const state={view:'dashboard',weekStart:null,weeks:[],categories:[],categoriesById:{},currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 let catFilter=null;
 const $=id=>document.getElementById(id);
 const fmt=n=>n<0?'-$'+Math.abs(n).toFixed(2):'$'+Number(n).toFixed(2);
@@ -249,7 +249,9 @@ async function boot(){
   state.weekStart=saturday();await loadMeta();render();
 }
 async function loadMeta(){
-  const {data:cats}=await sb.from('categories').select('*').eq('is_active',true).order('sort_order');state.categories=cats||[];
+  const {data:allCats}=await sb.from('categories').select('*').order('sort_order');
+  state.categoriesById={};(allCats||[]).forEach(c=>{state.categoriesById[c.id]=c;});
+  state.categories=(allCats||[]).filter(c=>c.is_active);
   const {data:ws}=await sb.from('weeks').select('*').order('start_date',{ascending:false});state.weeks=ws||[];
   const {data:sv}=await sb.from('settings').select('*');(sv||[]).forEach(r=>{state.settings[r.key]=r.value;});
   const {data:vm}=await sb.from('vendor_category_map').select('*');state.vendorMap={};state.vendorNames=[];
@@ -307,8 +309,9 @@ function renderDashboard(){
 }
 function renderCatCards(catSpending,pot){
   const grid=$('catGrid');if(!grid)return;
-  const spendMap={};catSpending.forEach(c=>{spendMap[c.category_id]=c;});
-  const rows=state.categories.map(c=>({...c,spent:spendMap[c.id]?+spendMap[c.id].spent:0})).filter(c=>c.spent>0||catSpending.length===0);
+  const rows=catSpending.length===0
+    ?state.categories.map(c=>({...c,spent:0}))
+    :catSpending.map(cs=>({...(state.categoriesById[cs.category_id]||{}),spent:+cs.spent})).filter(c=>c.spent>0);
   if(rows.length===0){grid.innerHTML='';return;}
   grid.innerHTML=rows.map(c=>{const pct=pot>0?(c.spent/pot*100):0;const active=c.id===catFilter;return `<div class="cat-card ${active?'active':''}" onclick="toggleCatFilter('${c.id}')"><div class="cat-fill" style="height:${Math.min(pct*2,80)}%;background:${c.color}"></div><div style="position:relative"><div class="cat-top"><span class="cat-icon">${c.icon}</span><span class="cat-name">${esc(c.name)}</span></div><div class="cat-spent" style="color:${c.color}">${fmt(c.spent)}</div><div class="cat-pct">${pct.toFixed(1)}% of pot</div><div class="cat-bar"><div class="cat-bar-fill" style="width:${Math.min(pct*2,100)}%;background:${c.color}"></div></div></div></div>`;}).join('');
 }
@@ -512,7 +515,7 @@ function renderSettings(){
   $('app').innerHTML=`<nav class="nav"><div class="brand">Envelope<span>.</span><span class="ver">v${APP_VERSION}</span></div><div class="tabs"><button class="tab" data-v="dashboard" onclick="showTab('dashboard')">This Week</button><button class="tab" data-v="history" onclick="showTab('history')">History</button></div><button class="btn-icon" onclick="showTab('settings')" style="background:var(--teal);color:var(--action-text)">⚙</button></nav>
   <div class="settings-view">
     <div class="settings-section"><div class="settings-title">Default Weekly Budget</div><div class="field"><label>Amount ($)</label><input type="number" id="defBudgetInput" value="${defBudget}" step="1" min="1"></div><button class="btn-primary" onclick="saveDefBudget()">Save Default</button></div>
-    <div class="settings-section"><div class="settings-title">Categories</div>${state.categories.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px"><span>${c.icon}</span><span style="flex:1;font-size:.88rem">${esc(c.name)}</span><span style="width:14px;height:14px;border-radius:50%;background:${c.color};display:inline-block;flex-shrink:0"></span></div>`).join('')}
+    <div class="settings-section"><div class="settings-title">Categories</div>${state.categories.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px"><span>${c.icon}</span><span style="flex:1;font-size:.88rem">${esc(c.name)}</span><span style="width:14px;height:14px;border-radius:50%;background:${c.color};display:inline-block;flex-shrink:0"></span><button onclick="archiveCategory('${c.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.78rem;flex-shrink:0">archive</button></div>`).join('')}
     <div style="margin-top:14px"><div class="settings-title">Add Category</div><div class="frow"><div class="field"><label>Name</label><input type="text" id="newCatName" placeholder="Entertainment"></div><div class="field" style="flex:0 0 70px"><label>Icon</label><input type="text" id="newCatIcon" placeholder="🎮" maxlength="2"></div><div class="field" style="flex:0 0 60px"><label>Color</label><input type="color" id="newCatColor" value="#A8E63D" style="height:42px;padding:3px"></div></div><button class="btn-primary" onclick="addCategory()">Add</button></div></div>
     <div class="settings-section"><div class="settings-title">Vendor Memory</div><div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">${state.vendorNames.length} vendor${state.vendorNames.length!==1?'s':''} learned.</div>${state.vendorNames.slice(0,10).map((v,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:.82rem">${esc(v)}</span><span style="font-size:.78rem;color:var(--muted)">${esc(state.categories.find(c=>c.id===state.vendorMap[v])?.name||'')}</span><button onclick="forgetVendorIdx(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.78rem">forget</button></div>`).join('')}</div>
     <div class="settings-section"><div class="settings-title">Account</div><button class="btn-primary" style="background:var(--elevated);color:var(--text);border:1px solid var(--border)" onclick="doSignOut()">Sign Out</button></div>
@@ -520,6 +523,15 @@ function renderSettings(){
 }
 async function saveDefBudget(){const v=$('defBudgetInput').value.trim();if(!v||isNaN(v)){showToast('Enter a valid amount');return;}await sb.from('settings').upsert({key:'weekly_budget',value:v,user_id:session.user.id});state.settings.weekly_budget=v;showToast('Default budget saved ✓');}
 async function addCategory(){const name=$('newCatName').value.trim();const icon=$('newCatIcon').value.trim()||'💰';const color=$('newCatColor').value;if(!name){showToast('Enter a name');return;}const maxSort=Math.max(0,...state.categories.map(c=>c.sort_order));const {error}=await sb.from('categories').insert({name,icon,color,sort_order:maxSort+1,user_id:session.user.id});if(error){showToast('Error: '+error.message);return;}showToast('Category added');await loadMeta();renderSettings();}
+async function archiveCategory(id){
+  const cat=state.categories.find(c=>c.id===id);if(!cat)return;
+  if(!confirm(`Archive "${cat.name}"? It'll be hidden from new transactions, but past spending stays intact in History.`))return;
+  const {error}=await sb.from('categories').update({is_active:false}).eq('id',id);
+  if(error){showToast('Error: '+error.message);return;}
+  if(catFilter===id)catFilter=null;
+  showToast('Category archived');
+  await loadMeta();renderSettings();
+}
 function forgetVendorIdx(i){const v=state.vendorNames[i];if(v!=null)forgetVendor(v);}
 async function forgetVendor(vkey){await sb.from('vendor_category_map').delete().eq('vendor_key',vkey);delete state.vendorMap[vkey];state.vendorNames=state.vendorNames.filter(v=>v!==vkey);showToast('Forgotten');renderSettings();}
 async function doSignOut(){await sb.auth.signOut();session=null;renderLogin();}
