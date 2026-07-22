@@ -196,13 +196,13 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js"></script>
 <script>
 let sb,session;
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 const $=id=>document.getElementById(id);
 const fmt=n=>n<0?'-$'+Math.abs(n).toFixed(2):'$'+Number(n).toFixed(2);
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function saturday(d=new Date()){const dt=new Date(d);dt.setHours(0,0,0,0);const dow=dt.getDay();dt.setDate(dt.getDate()-((dow+1)%7));return dt;}
-function dateStr(d){return d.toISOString().slice(0,10);}
+function dateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function fmtRange(start){const s=new Date(start+'T00:00:00');const e=new Date(s);e.setDate(e.getDate()+6);const mo=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});return mo(s)+' – '+mo(e);}
 function isCurrentWeek(startDate){return startDate===dateStr(saturday());}
 function showToast(msg,undoFn){
@@ -350,7 +350,7 @@ let editingGroupId=null,editingWeekId=null;
 function openAddTxn(){
   if(!state.currentWeek)return;
   editingGroupId=null;editingWeekId=null;$('txnModalTitle').textContent='Log Spending';
-  $('txnVendor').value='';$('txnDesc').value='';$('txnDate').value=new Date().toISOString().slice(0,10);
+  $('txnVendor').value='';$('txnDesc').value='';$('txnDate').value=dateStr(new Date());
   splitRows=[{category_id:state.categories[0]?.id||'',amount:''}];renderSplitRows();updateSplitHint();
   openOverlay('txnOverlay');
   if(matchMedia('(hover:hover)').matches) setTimeout(()=>$('txnVendor').focus(),120);
