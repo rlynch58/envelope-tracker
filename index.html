@@ -192,7 +192,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js"></script>
 <script>
 let sb,session;
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.9';
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],categoriesById:{},currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 let catFilter=null;
 const $=id=>document.getElementById(id);
@@ -385,14 +385,14 @@ function openEditTxn(groupId){
   $('txnVendor').value=rows[0].vendor||'';
   $('txnDesc').value=rows[0].description||'';
   $('txnDate').value=rows[0].txn_date;
-  if(rows[0].txn_date===dateStr(new Date()))showDateCollapsed(rows[0].txn_date);else expandDate();
+  if(rows[0].txn_date===dateStr(new Date()))showDateCollapsed(rows[0].txn_date);else expandDate(false);
   splitRows=rows.map(r=>({category_id:r.category_id,amount:String(r.amount)}));
   renderSplitRows();updateSplitHint();
   renderVendorChips();
   openOverlay('txnOverlay');
 }
 function showDateCollapsed(dstr){$('dateCollapsedText').textContent=fmtDateShort(dstr);$('dateCollapsed').style.display='block';$('txnDate').style.display='none';}
-function expandDate(){$('dateCollapsed').style.display='none';$('txnDate').style.display='block';$('txnDate').focus();if(typeof $('txnDate').showPicker==='function'){try{$('txnDate').showPicker();}catch(e){}}}
+function expandDate(autoOpen=true){$('dateCollapsed').style.display='none';$('txnDate').style.display='block';if(autoOpen){$('txnDate').focus();if(typeof $('txnDate').showPicker==='function'){try{$('txnDate').showPicker();}catch(e){}}}}
 function renderVendorChips(){
   const el=$('vendorChips');if(!el)return;
   const chips=(state.topVendors||[]).slice(0,5);
@@ -414,18 +414,20 @@ async function submitTransaction(){
   const btn=$('txnSubmitBtn');btn.disabled=true;btn.textContent='Saving…';
   const vkey=vendor.toLowerCase().trim();
   if(editingGroupId){
-    const groupId=editingGroupId,weekId=editingWeekId;
-    const {error:delErr}=await sb.from('transactions').delete().eq('group_id',groupId);
-    if(delErr){showToast('Error: '+delErr.message);btn.disabled=false;btn.textContent='Save';return;}
-    const inserts=rows.map(r=>({week_id:weekId,category_id:r.category_id,group_id:groupId,vendor:vendor||null,description:desc||null,amount:r.amount,txn_date:date,user_id:session.user.id}));
-    const {error}=await sb.from('transactions').insert(inserts);
-    if(error){showToast('Error: '+error.message);btn.disabled=false;btn.textContent='Save';return;}
+    const oldGroupId=editingGroupId,weekId=editingWeekId;
+    const newGroupId=crypto.randomUUID();
+    const inserts=rows.map(r=>({week_id:weekId,category_id:r.category_id,group_id:newGroupId,vendor:vendor||null,description:desc||null,amount:r.amount,txn_date:date,user_id:session.user.id}));
+    const {error:insErr}=await sb.from('transactions').insert(inserts);
+    if(insErr){showToast('Error: '+insErr.message);btn.disabled=false;btn.textContent='Save';return;}
+    const {error:delErr}=await sb.from('transactions').delete().eq('group_id',oldGroupId);
+    if(delErr)showToast("Saved, but couldn't remove the old version — please delete the duplicate manually");
     await sb.from('vendor_category_map').upsert({vendor_key:vkey,category_id:rows[0].category_id,user_id:session.user.id,updated_at:new Date().toISOString()});
     if(!state.vendorMap[vkey]){state.vendorNames.push(vkey);state.vendorNames.sort();}
     state.vendorMap[vkey]=rows[0].category_id;
     editingGroupId=null;editingWeekId=null;
     await computeTopVendors();
-    btn.disabled=false;btn.textContent='Save';closeOverlay('txnOverlay');showToast('Updated ✓');
+    btn.disabled=false;btn.textContent='Save';closeOverlay('txnOverlay');
+    if(!delErr)showToast('Updated ✓');
     if(state.view==='history-detail')openHistoryDetail(state.historyDetailWeek);else render();
     return;
   }
