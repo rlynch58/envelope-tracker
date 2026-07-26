@@ -11,16 +11,79 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0F2A2B;--surface:#17393B;--elevated:#1E4345;--border:#2E5A5C;--text:#EAF7F6;--muted:#7FB5B3;--teal:#FF6B35;--teal-text:#FF9A6B;--red:#FF8585;--amber:#E8C25A;--lime:#A8E63D;--action-text:#1A0D06;--fg:'Space Grotesk',sans-serif;--fb:'Inter',sans-serif;--r:12px;--rs:8px;}
+:root{
+  --bg:#0F2A2B;--surface:#17393B;--elevated:#1E4345;--border:#2E5A5C;--text:#EAF7F6;--muted:#7FB5B3;
+  --teal:#FF6B35;--teal-text:#FF9A6B;--red:#FF8585;--amber:#E8C25A;--lime:#A8E63D;--action-text:#1A0D06;
+  /* --amber is a TEXT color (init banner, rollover notes) *and* the Start Week
+     button's fill. Light has to deepen the text one a long way to stay legible
+     on a near-white card, which would turn the button into mud — so the fill
+     gets its own token. Dark just mirrors --amber, so nothing changes here. */
+  --amber-fill:#E8C25A;
+  /* Ring around .btn-amber. Dark doesn't need one (the gold already separates
+     from the card); light uses it so the button has a visible edge without
+     darkening the gold itself. box-shadow, not border, so there's no 2px
+     layout shift between themes. */
+  --amber-ring:transparent;
+  --amber-border:rgba(232,194,90,.4); /* .init-banner outline */
+  --track:rgba(234,247,246,.14);      /* pot-bar + cat-bar unfilled track */
+  --row-hover:rgba(234,247,246,.04);
+  --red-tint:rgba(255,133,133,.16);   /* delete-button hover wash */
+  --overlay-bg:rgba(0,0,0,.72);
+  --toast-bg:#20494B;
+  --toast-shadow:rgba(0,0,0,.45);
+  --tab-active-shadow:none;
+  /* Fading ink toward the page hits much harder on light (a 60% deep-teal on a
+     pale page lands at 3.71:1, vs 5.88:1 for the same trick on dark), so the
+     version tag's fade is theme-conditional rather than a flat .6. */
+  --ver-opacity:.6;
+  /* Category colors come from the DB (user-picked, chosen against the dark
+     palette), so they can't be themed by token. Light darkens them at paint
+     time for the uses that need contrast — the spent figure, the mini bar and
+     the transaction dot. The 19%-opacity .cat-fill wash is deliberately left
+     alone: it's meant to be faint. */
+  --cat-filter:none;
+  --fg:'Space Grotesk',sans-serif;--fb:'Inter',sans-serif;--r:12px;--rs:8px;
+}
+/* ---------- Light theme ---------- */
+:root[data-theme="light"]{
+  /* Same three-step elevation order as dark (page darkest, cards lightest),
+     just inverted in tone: a pale teal-tinted page so the deep-teal brand
+     ground still reads, white cards, off-white modal/tab-strip surface. */
+  --bg:#DEE9E7;--surface:#F4FAF9;--elevated:#FFFFFF;--border:#B8CECB;--text:#132F31;--muted:#4B6A6B;
+  /* Accents kept in the same hue family, deepened until they clear 4.5:1 as
+     text on the *page* (the tightest of the three backgrounds): --teal-text
+     4.91, --red 4.75, --amber 4.89. --teal stays the brighter orange because
+     it's a fill, not text — it carries --action-text at 5.06:1 and clears
+     3:1 against both the page (3.03) and cards (3.76) for its border uses.
+     --lime is fill-only (the nav icon buttons): 5.01:1 with --action-text,
+     3.06:1 against the page. */
+  --teal:#E3551B;--teal-text:#AC3E0B;--red:#BC2F1B;--amber:#855A05;--lime:#639018;
+  --action-text:#1A0D06; /* unchanged — every accent fill stays bright in light, so dark glyphs still win */
+  --amber-fill:#E0B03A;--amber-ring:#A97C12;
+  --amber-border:rgba(133,90,5,.4);
+  --track:rgba(19,47,49,.16);
+  --row-hover:rgba(19,47,49,.05);
+  --red-tint:rgba(188,47,27,.12);
+  /* Bottom-sheet modals still want a dark scrim in light mode — a pale one
+     would leave the near-white modal with nothing to sit against. */
+  --overlay-bg:rgba(10,32,33,.45);
+  --toast-bg:#FFFFFF;
+  --toast-shadow:rgba(19,47,49,.22);
+  /* The active tab is white on an off-white strip (1.06:1) — too close to read
+     as selected on its own, so light leans on a shadow instead. */
+  --tab-active-shadow:0 1px 2px rgba(19,47,49,.18);
+  --ver-opacity:.75; /* 5.60:1 — matches dark's perceived weight, not its raw alpha */
+  --cat-filter:brightness(.62) saturate(1.15);
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:100;}
 .brand{font-family:var(--fg);font-size:1.4rem;font-weight:800;letter-spacing:-.03em;color:var(--teal);}
 .brand span{color:var(--text);}
-.ver{font-size:.68rem;font-weight:600;color:var(--text);opacity:.6;margin-left:6px;letter-spacing:0;vertical-align:2px;font-family:var(--fb);}
+.ver{font-size:.68rem;font-weight:600;color:var(--text);opacity:var(--ver-opacity);margin-left:6px;letter-spacing:0;vertical-align:2px;font-family:var(--fb);}
 .tabs{display:flex;gap:3px;background:var(--surface);border-radius:var(--rs);padding:3px;}
 .tab{padding:6px 14px;border:none;border-radius:6px;background:transparent;color:var(--muted);font-family:var(--fb);font-size:.82rem;font-weight:500;cursor:pointer;transition:all .15s;}
-.tab.active{background:var(--elevated);color:var(--text);}
+.tab.active{background:var(--elevated);color:var(--text);box-shadow:var(--tab-active-shadow);}
 .btn-icon{width:36px;height:36px;border:none;border-radius:var(--rs);background:var(--lime);color:var(--action-text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .15s;}
 .btn-icon:hover{opacity:.85;}
 .hero{padding:24px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;}
@@ -49,12 +112,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .pot-bar-outer{flex:1;position:relative;padding-top:18px;}
 .pot-bar-pct{position:absolute;top:0;font-family:var(--fg);font-size:.85rem;font-weight:800;color:var(--teal-text);transform:translateX(-50%);white-space:nowrap;transition:left .4s ease;}
 .pot-bar-pct.over{color:var(--red);}
-.pot-bar{width:100%;height:4px;background:rgba(234,247,246,.14);border-radius:2px;overflow:hidden;}
+.pot-bar{width:100%;height:4px;background:var(--track);border-radius:2px;overflow:hidden;}
 .pot-bar-fill{height:100%;border-radius:2px;background:var(--teal);transition:width .4s ease,background .3s;}
 .pot-bar-fill.over{background:var(--red);}
-.init-banner{margin:0 20px 18px;background:var(--elevated);border:1px solid rgba(232,194,90,.4);border-radius:var(--rs);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.init-banner{margin:0 20px 18px;background:var(--elevated);border:1px solid var(--amber-border);border-radius:var(--rs);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .init-banner-text{font-size:.84rem;color:var(--amber);}
-.btn-amber{padding:7px 14px;background:var(--amber);color:var(--action-text);border:none;border-radius:6px;font-family:var(--fg);font-size:.78rem;font-weight:700;cursor:pointer;flex-shrink:0;}
+.btn-amber{padding:7px 14px;background:var(--amber-fill);color:var(--action-text);border:none;box-shadow:0 0 0 1px var(--amber-ring);border-radius:6px;font-family:var(--fg);font-size:.78rem;font-weight:700;cursor:pointer;flex-shrink:0;}
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:0 20px 20px;}
 .cat-card{background:var(--elevated);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
 .cat-card.active{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal);}
@@ -62,10 +125,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .cat-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .cat-icon{font-size:1.1rem;}
 .cat-name{font-family:var(--fg);font-size:.82rem;font-weight:600;letter-spacing:-.01em;color:var(--text);}
-.cat-spent{font-family:var(--fg);font-size:1.2rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.04em;line-height:1;margin-bottom:3px;}
+.cat-spent{font-family:var(--fg);font-size:1.2rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.04em;line-height:1;margin-bottom:3px;filter:var(--cat-filter);}
 .cat-pct{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums;}
-.cat-bar{height:3px;background:rgba(234,247,246,.14);border-radius:2px;overflow:hidden;margin-top:10px;}
-.cat-bar-fill{height:100%;border-radius:2px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.cat-bar{height:3px;background:var(--track);border-radius:2px;overflow:hidden;margin-top:10px;}
+.cat-bar-fill{height:100%;border-radius:2px;transition:width .5s cubic-bezier(.4,0,.2,1);filter:var(--cat-filter);}
 .add-row{padding:0 20px 20px;display:flex;justify-content:flex-end;}
 .btn-add{display:flex;align-items:center;gap:7px;padding:9px 18px;background:var(--teal);color:var(--action-text);border:none;border-radius:var(--rs);font-family:var(--fg);font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:-.01em;transition:opacity .15s;}
 .txn-section{padding:0 20px 32px;}
@@ -74,8 +137,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .txn-group{margin-bottom:0;}
 .txn-group:not(:last-child){border-bottom:1px solid var(--border);}
 .txn-row{display:flex;align-items:center;gap:12px;padding:13px 0;transition:background .12s;cursor:default;}
-.txn-row:hover{background:rgba(234,247,246,.04);}
-.txn-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.txn-row:hover{background:var(--row-hover);}
+.txn-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;filter:var(--cat-filter);}
 .txn-main{flex:1;min-width:0;}
 .txn-vendor{font-size:.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .txn-meta{font-size:.72rem;color:var(--muted);margin-top:1px;}
@@ -87,7 +150,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .txn-edit{opacity:.85;font-size:.74rem;color:var(--teal-text);font-weight:700;background:none;border:none;cursor:pointer;padding:2px 8px;flex-shrink:0;font-family:var(--fb);}
 .txn-edit:hover{opacity:1;text-decoration:underline;}
 .txn-row:hover .txn-del{opacity:1;}
-.txn-del:hover{color:var(--red);background:rgba(255,133,133,.16);}
+.txn-del:hover{color:var(--red);background:var(--red-tint);}
 .split-line{padding:6px 14px 6px 33px;display:flex;align-items:center;gap:8px;}
 .split-line .txn-dot{width:5px;height:5px;opacity:.7;}
 .split-line .txn-cat-name{font-size:.78rem;color:var(--muted);flex:1;}
@@ -104,7 +167,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .settings-view{padding:20px;max-width:500px;}
 .settings-section{margin-bottom:28px;}
 .settings-title{font-family:var(--fg);font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s;}
+.overlay{position:fixed;inset:0;background:var(--overlay-bg);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s;}
 .overlay.open{opacity:1;pointer-events:all;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;padding:24px 20px 44px;width:100%;max-width:500px;transform:translateY(20px);transition:transform .25s cubic-bezier(.4,0,.2,1);}
 .overlay.open .modal{transform:translateY(0);}
@@ -140,7 +203,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--elevated);border:1px solid var(--teal);border-radius:0 0 var(--rs) var(--rs);z-index:200;max-height:160px;overflow-y:auto;}
 .autocomplete-item{padding:9px 13px;font-size:.88rem;cursor:pointer;transition:background .1s;}
 .autocomplete-item:hover{background:var(--surface);}
-.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:#20494B;border:1px solid var(--teal);box-shadow:0 8px 28px rgba(0,0,0,.45);border-radius:var(--rs);padding:9px 18px;font-size:.82rem;color:var(--text);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:2000;white-space:nowrap;}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--toast-bg);border:1px solid var(--teal);box-shadow:0 8px 28px var(--toast-shadow);border-radius:var(--rs);padding:9px 18px;font-size:.82rem;color:var(--text);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:2000;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.actionable{pointer-events:auto;display:flex;align-items:center;gap:14px;}
 .toast-undo{color:var(--teal-text);font-weight:700;cursor:pointer;background:none;border:none;font-size:.82rem;padding:0;font-family:var(--fg);}
@@ -156,6 +219,45 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 </style>
 <link rel="apple-touch-icon" href="apple-touch-icon-180.png">
 <link rel="manifest" href="manifest.json">
+<script>
+// ---------- Theme ----------
+// Lives in <head>, not the main app script, so the stored preference is applied
+// before the first paint — the app script sits behind a blocking CDN <script>
+// tag at the bottom of <body>, which is late enough to flash the wrong page
+// background. localStorage (not the settings table) is the pre-signin source of
+// truth for the same reason it is in Health Tracker: settings only load after
+// sign-in, so the DB can't answer in time for the login screen.
+const THEME_STORAGE_KEY='envelope-tracker-theme';
+function getStoredThemePreference(){
+  try{
+    const v=window.localStorage.getItem(THEME_STORAGE_KEY);
+    return (v==='light'||v==='dark'||v==='system')?v:null;
+  }catch{return null;}
+}
+let themePreference=getStoredThemePreference()||'system'; // 'light' | 'dark' | 'system'
+function resolveTheme(pref){
+  if(pref==='light'||pref==='dark')return pref;
+  return (window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';
+}
+function applyTheme(){
+  const resolved=resolveTheme(themePreference);
+  if(resolved==='light')document.documentElement.setAttribute('data-theme','light');
+  else document.documentElement.removeAttribute('data-theme');
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute('content',resolved==='light'?'#DEE9E7':'#0F2A2B');
+}
+function setThemePreference(pref){
+  themePreference=pref;
+  try{window.localStorage.setItem(THEME_STORAGE_KEY,pref);}catch{}
+  applyTheme();
+}
+applyTheme();
+if(window.matchMedia){
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change',()=>{
+    if(themePreference==='system')applyTheme();
+  });
+}
+</script>
 </head>
 <body>
 <script>
@@ -193,7 +295,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js"></script>
 <script>
 let sb,session;
-const APP_VERSION = '1.13';
+const APP_VERSION = '1.14';
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],categoriesById:{},currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 let catFilter=null;
 const $=id=>document.getElementById(id);
@@ -272,6 +374,12 @@ async function loadMeta(){
   state.categories=(allCats||[]).filter(c=>c.is_active);
   const {data:ws,error:weeksErr}=await sb.from('weeks').select('*').order('start_date',{ascending:false});state.weeks=ws||[];
   const {data:sv,error:setErr}=await sb.from('settings').select('*');(sv||[]).forEach(r=>{state.settings[r.key]=r.value;});
+  // A local pick always wins; the synced value only seeds a device that has
+  // never chosen one, so signing in doesn't yank the theme out from under you.
+  // Health Tracker captures this check once at boot, but loadMeta() re-runs on
+  // every ↻ refresh — so it has to be live, or a sync that failed (offline)
+  // would let the stale DB value clobber a pick made earlier this session.
+  if(getStoredThemePreference()===null&&['light','dark','system'].includes(state.settings.theme))setThemePreference(state.settings.theme);
   const {data:vm,error:vmErr}=await sb.from('vendor_category_map').select('*');state.vendorMap={};state.vendorNames=[];
   (vm||[]).forEach(r=>{state.vendorMap[r.vendor_key]=r.category_id;state.vendorNames.push(r.vendor_key);});state.vendorNames.sort();
   await computeTopVendors();
@@ -578,11 +686,23 @@ function renderSettings(){
   $('app').innerHTML=`${renderNav('settings')}
   <div class="settings-view">
     <div class="settings-section"><div class="settings-title">Default Weekly Budget</div><div class="field"><label>Amount ($)</label><input type="number" id="defBudgetInput" value="${defBudget}" step="1" min="1"></div><button class="btn-primary" onclick="saveDefBudget()">Save Default</button></div>
+    <div class="settings-section"><div class="settings-title">Appearance</div><div class="field"><label>Theme</label><select id="settingsTheme" onchange="handleThemeChange(this.value)"><option value="light" ${themePreference==='light'?'selected':''}>Light</option><option value="dark" ${themePreference==='dark'?'selected':''}>Dark</option><option value="system" ${themePreference==='system'?'selected':''}>System</option></select></div></div>
     <div class="settings-section"><div class="settings-title">Categories</div>${state.categories.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px"><span>${esc(c.icon)}</span><span style="flex:1;font-size:.88rem">${esc(c.name)}</span><span style="width:14px;height:14px;border-radius:50%;background:${c.color};display:inline-block;flex-shrink:0"></span><button onclick="archiveCategory('${c.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.78rem;flex-shrink:0">archive</button></div>`).join('')}
     <div style="margin-top:14px"><div class="settings-title">Add Category</div><div class="frow"><div class="field"><label>Name</label><input type="text" id="newCatName" placeholder="Entertainment"></div><div class="field" style="flex:0 0 70px"><label>Icon</label><input type="text" id="newCatIcon" placeholder="🎮" maxlength="16"></div><div class="field" style="flex:0 0 60px"><label>Color</label><input type="color" id="newCatColor" value="#A8E63D" style="height:42px;padding:3px"></div></div><button class="btn-primary" onclick="addCategory()">Add</button></div></div>
     <div class="settings-section"><div class="settings-title">Vendor Memory</div><div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">${state.vendorNames.length} vendor${state.vendorNames.length!==1?'s':''} learned.</div>${(vendorMemoryExpanded?state.vendorNames:state.vendorNames.slice(0,10)).map((v,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:.82rem">${esc(canonicalVendorKey(v))}</span><span style="font-size:.78rem;color:var(--muted)">${esc(state.categories.find(c=>c.id===state.vendorMap[v])?.name||'')}</span><button onclick="forgetVendorIdx(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.78rem">forget</button></div>`).join('')}${state.vendorNames.length>10?`<button onclick="toggleVendorMemoryExpanded()" style="background:none;border:none;color:var(--teal-text);cursor:pointer;font-size:.78rem;padding:6px 0;font-family:var(--fb)">${vendorMemoryExpanded?'Show less':`Show all (${state.vendorNames.length})`}</button>`:''}</div>
     <div class="settings-section"><div class="settings-title">Account</div><button class="btn-primary" style="background:var(--elevated);color:var(--text);border:1px solid var(--border)" onclick="doSignOut()">Sign Out</button></div>
   </div>`;
+}
+// Appearance applies instantly (unlike the default budget, which waits for its
+// Save button) and syncs in the background so another device picks it up.
+function handleThemeChange(pref){
+  setThemePreference(pref);
+  renderSettings();
+  if(session){
+    sb.from('settings').upsert({key:'theme',value:pref,user_id:session.user.id})
+      .then(({error})=>{if(error)console.error('Could not sync theme preference:',error);});
+  }
+  state.settings.theme=pref;
 }
 async function saveDefBudget(){const raw=$('defBudgetInput').value.trim();if(!raw||isNaN(raw)){showToast('Enter a valid amount');return;}const v=String(roundCents(parseFloat(raw)));await sb.from('settings').upsert({key:'weekly_budget',value:v,user_id:session.user.id});state.settings.weekly_budget=v;showToast('Default budget saved ✓');}
 async function addCategory(){const name=$('newCatName').value.trim();const icon=$('newCatIcon').value.trim()||'💰';const color=$('newCatColor').value;if(!name){showToast('Enter a name');return;}const maxSort=Math.max(0,...state.categories.map(c=>c.sort_order));const {error}=await sb.from('categories').insert({name,icon,color,sort_order:maxSort+1,user_id:session.user.id});if(error){showToast('Error: '+error.message);return;}showToast('Category added');await loadMeta();renderSettings();}
