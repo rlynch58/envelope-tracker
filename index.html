@@ -193,7 +193,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js"></script>
 <script>
 let sb,session;
-const APP_VERSION = '1.12';
+const APP_VERSION = '1.13';
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],categoriesById:{},currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 let catFilter=null;
 const $=id=>document.getElementById(id);
@@ -250,15 +250,20 @@ async function dbCall(promiseLike){
 }
 async function boot(){
   initSB();
+  state.weekStart=saturday();
   $('app').innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;"><div style="color:var(--muted);font-size:.9rem">Loading…</div></div>';
-  sb.auth.onAuthStateChange(async(_,ns)=>{
-    if(ns){session=ns;state.weekStart=state.weekStart||saturday();await loadMeta();render();}
-    else{session=null;renderLogin();}
-  });
   const {data:{session:s}}=await sb.auth.getSession();
   session=s;
+  // Registered only after getSession() resolves, and deliberately NOT async: supabase-js
+  // awaits this callback from inside its own initialize(), so any await on a Supabase call
+  // here deadlocks against the setup it is waiting on. Sign-out routing only — boot() and
+  // doLogin() own the data loading.
+  sb.auth.onAuthStateChange((event,ns)=>{
+    if(event==='SIGNED_OUT'||!ns){session=null;renderLogin();return;}
+    session=ns;
+  });
   if(!s){renderLogin();return;}
-  state.weekStart=saturday();await loadMeta();render();
+  await loadMeta();render();
 }
 async function loadMeta(){
   state.settings={};
