@@ -42,6 +42,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .hstat-spent-val{font-family:var(--fg);font-weight:700;}
 .pos{color:var(--teal-text);}.neg{color:var(--red);}.neu{color:var(--text);}
 .pot-bar-wrap{margin:0 20px 20px;background:var(--elevated);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;}
+.pace-line{margin:-8px 20px 20px;font-size:.78rem;color:var(--muted);}
 .pot-bar-row{display:flex;align-items:center;gap:14px;}
 .pot-bar-label{font-family:var(--fg);font-size:.72rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap;}
 .pot-bar-label.neg{color:var(--red);}
@@ -149,7 +150,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .login-sub{color:var(--muted);font-size:.86rem;margin-bottom:28px;}
 .login-form{width:100%;max-width:340px;}
 .login-err{color:var(--red);font-size:.8rem;margin-bottom:10px;min-height:18px;}
-@media(min-width:640px){.cat-grid{grid-template-columns:repeat(4,1fr);}.hero{padding:28px 28px 18px;}.pot-bar-wrap,.add-row,.txn-section,.cat-grid,.init-banner{padding-left:28px;padding-right:28px;}.hstat-hero-val{font-size:2.9rem;}}
+@media(min-width:640px){.cat-grid{grid-template-columns:repeat(4,1fr);}.hero{padding:28px 28px 18px;}.pot-bar-wrap,.add-row,.txn-section,.cat-grid,.init-banner{padding-left:28px;padding-right:28px;}.pace-line{margin-left:28px;margin-right:28px;}.hstat-hero-val{font-size:2.9rem;}}
 @media(max-width:400px){.cat-grid{grid-template-columns:1fr 1fr;}.hero-stats{gap:16px;}.hstat-val{font-size:1.1rem;}.hstat-hero-val{font-size:1.7rem;}.week-range{font-size:1.2rem;}}
 ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 </style>
@@ -192,7 +193,7 @@ const SUPABASE_ANON = 'sb_publishable_WhLJPvvEKb6hMhIY1x5h_Q_b8uXAaiE';
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js"></script>
 <script>
 let sb,session;
-const APP_VERSION = '1.11';
+const APP_VERSION = '1.12';
 const state={view:'dashboard',weekStart:null,weeks:[],categories:[],categoriesById:{},currentWeek:null,transactions:[],summary:null,catSpending:[],settings:{},historyDetailWeek:null,historyDetailTxns:[],historyDetailCats:[],historyDetailSummary:null,vendorMap:{},vendorNames:[]};
 let catFilter=null;
 const $=id=>document.getElementById(id);
@@ -306,9 +307,22 @@ function renderDashboard(){
   const wStr=dateStr(state.weekStart);const isCur=isCurrentWeek(wStr);const s=state.summary;
   const pot=s?+s.total_pot:0;const spent=s?+s.total_spent:0;const rem=s?+s.remaining:0;
   const rawPct=pot>0?spent/pot*100:0;const fillPct=Math.min(rawPct,100);const isOver=rem<0;const weekExists=!!state.currentWeek;
+  let paceLine='';
+  if(weekExists&&isCur){
+    const daysElapsed=((new Date().getDay()+1)%7)+1;
+    if(daysElapsed>=2){
+      const expectedSoFar=(pot/7)*daysElapsed;
+      if(expectedSoFar>0){
+        const pctOfPace=Math.round(spent/expectedSoFar*100);
+        const verdict=pctOfPace<90?'Under Pace':(pctOfPace<=100?'Right on Track':'Ahead of Pace');
+        paceLine=`<div class="pace-line">Day ${daysElapsed} of 7 · ${pctOfPace}% of pace · ${verdict}</div>`;
+      }
+    }
+  }
   $('app').innerHTML=`${renderNav('dashboard')}
   <div class="hero"><div class="hero-left"><div class="week-label">Week of</div><div class="week-range">${fmtRange(wStr)}</div><div class="week-nav"><button onclick="prevWeek()">←</button>${isCur?'<span class="now-badge">NOW</span>':''}<button onclick="nextWeek()" ${isCur?'disabled':''}>→</button></div></div>${weekExists?`<div class="hero-stats"><div class="hstat-hero"><div class="hstat-label">Left</div><div class="hstat-hero-val ${isOver?'neg':'pos'}">${fmt(rem)}</div><div class="hstat-spent-line"><span class="hstat-spent-label">Spent</span> <span class="hstat-spent-val neu">${fmt(spent)}</span></div></div></div>`:''}</div>
   ${weekExists?`<div class="pot-bar-wrap"><div class="pot-bar-row"><span class="pot-bar-label">$0</span><div class="pot-bar-outer"><div class="pot-bar-pct ${isOver?'over':''}" style="left:${Math.min(Math.max(fillPct,6),98)}%">${rawPct.toFixed(1)}%</div><div class="pot-bar"><div class="pot-bar-fill ${isOver?'over':''}" style="width:${fillPct}%"></div></div></div><span class="pot-bar-label ${isOver?'neg':'neu'}">${fmt(pot)}${s&&+s.rollover>0?'*':''}</span></div>${s&&+s.rollover>0?`<div style="font-size:.74rem;color:var(--amber);margin-top:10px;">* includes ${fmt(+s.rollover)} rollover from last week</div>`:''}</div>`:'' }
+  ${paceLine}
   ${!weekExists&&isCur?`<div class="init-banner"><div><div class="init-banner-text">📅 Set up Week of ${fmtRange(wStr)}</div><div style="font-size:.78rem;color:var(--muted);margin-top:3px;">${fmt(parseFloat(state.settings.weekly_budget)||600)} budget${pendingRollover>0?` · +${fmt(pendingRollover)} rollover from last week`:''}</div></div><div style="display:flex;gap:12px;align-items:center;flex-shrink:0;"><button class="btn-amber" id="oneTapBtn" onclick="oneTapStartWeek()">Start Week</button><span style="font-size:.78rem;color:var(--muted);text-decoration:underline;cursor:pointer;white-space:nowrap;" onclick="openInitWeek()">Customize</span></div></div>`:''}
   ${!weekExists&&!isCur?`<div class="init-banner"><div class="init-banner-text">No data for this week.</div></div>`:''}
   <div class="cat-grid" id="catGrid"></div>
